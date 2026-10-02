@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
+import { ActiveAlertsBanner } from "../components/ActiveAlertsBanner";
+import { useActiveAlerts } from "../hooks/useAlerts";
 import type { Sensor } from "../types";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Cpu, Pencil, Plus, Trash2 } from "lucide-react";
+import { BellPlus, Cpu, Pencil, Plus, ShieldAlert, Trash2 } from "lucide-react";
 import {
   useCreateSensor,
   useCreateSensorType,
@@ -46,6 +48,8 @@ export function SensorsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const greenhouseId = Number(id);
+  const { data: activeAlerts } = useActiveAlerts(greenhouseId);
+  const alertingSensors = new Set((activeAlerts?.results ?? []).map((a) => a.sensor));
   const { data: me } = useMe();
   const { data: sensors, isLoading } = useSensors(greenhouseId);
   const { data: sensorTypes } = useSensorTypesFor(greenhouseId);
@@ -148,6 +152,8 @@ export function SensorsPage() {
         }
       />
 
+      <ActiveAlertsBanner greenhouseId={greenhouseId} />
+
       {isLoading ? (
         <Spinner />
       ) : !sensors?.length ? (
@@ -165,21 +171,30 @@ export function SensorsPage() {
                 key={s.id}
                 className="relative overflow-hidden border-brand-100/80 bg-gradient-to-br from-white to-brand-50/40"
               >
-                <button
-                  onClick={() => setEditing(s)}
-                  className="absolute right-10 top-3 z-10 rounded-lg p-1 text-neutral-400 hover:bg-brand-50 hover:text-brand-700"
-                  title="Editar"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setToDelete(s.id)}
-                  className="absolute right-3 top-3 z-10 rounded-lg p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
-                  title="Eliminar"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
+                  <div className="order-first flex justify-end gap-1 sm:order-last sm:flex-col sm:self-start">
+                    <Link
+                      to={`/greenhouses/${greenhouseId}/alerts?sensor=${s.id}`}
+                      className="rounded-lg p-2 text-neutral-400 hover:bg-brand-50 hover:text-brand-700 sm:p-1"
+                      title="Crear regla de alerta"
+                    >
+                      <BellPlus className="h-4 w-4" />
+                    </Link>
+                    <button
+                      onClick={() => setEditing(s)}
+                      className="rounded-lg p-2 text-neutral-400 hover:bg-brand-50 hover:text-brand-700 sm:p-1"
+                      title="Editar"
+                    >
+                      <Pencil className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => setToDelete(s.id)}
+                      className="rounded-lg p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600 sm:p-1"
+                      title="Eliminar"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                   <Link
                     to={`/greenhouses/${greenhouseId}/sensors/${s.id}`}
                     className="flex flex-1 items-center gap-4"
@@ -193,9 +208,14 @@ export function SensorsPage() {
                       size={60}
                     />
                     <div className="min-w-0">
-                      <p className="flex items-center gap-2 truncate font-semibold text-neutral-900">
-                        {s.name}
-                        <span className="inline-flex items-center rounded-md bg-brand-50 pl-1.5 font-mono text-[11px] font-medium text-brand-700">
+                      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-semibold text-neutral-900">
+                        <span className="break-words">{s.name}</span>
+                        {alertingSensors.has(s.id) && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-[11px] font-semibold text-red-700">
+                            <ShieldAlert className="h-3 w-3" /> Alerta
+                          </span>
+                        )}
+                        <span className="inline-flex max-w-full items-center rounded-md bg-brand-50 pl-1.5 font-mono text-[11px] font-medium text-brand-700">
                           ID {s.id}
                           <CopyButton text={String(s.id)} className="!px-1 !py-0.5" />
                         </span>
@@ -208,14 +228,14 @@ export function SensorsPage() {
                     </div>
                   </Link>
 
-                  <div className="flex shrink-0 items-baseline gap-1.5 sm:w-32 sm:justify-end">
+                  <div className="flex shrink-0 items-baseline gap-1.5 sm:w-28 sm:justify-end lg:w-32">
                     <span className="text-2xl font-semibold text-neutral-900">
                       {live?.value ?? "—"}
                     </span>
                     <span className="text-sm text-neutral-500">{live?.unit ?? s.effective_unit}</span>
                   </div>
 
-                  <div className="w-full sm:w-56">
+                  <div className="w-full sm:w-40 lg:w-56">
                     <LiveSparkline points={points} color={preset?.hex} unit={live?.unit ?? s.effective_unit} />
                   </div>
                 </div>

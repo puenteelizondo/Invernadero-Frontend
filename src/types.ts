@@ -148,7 +148,13 @@ export interface CursorPage<T> {
 // Sobre de cada evento de WebSocket (ver README del backend,
 // sección "WebSockets / tiempo real").
 export interface RealtimeEvent<T = unknown> {
-  event: "snapshot" | "sensor_reading" | "actuator_state_changed";
+  event:
+    | "snapshot"
+    | "sensor_reading"
+    | "actuator_state_changed"
+    | "alert_opened"
+    | "alert_resolved"
+    | "alert_acknowledged";
   timestamp: string;
   payload: T;
 }
@@ -191,3 +197,49 @@ export interface ActuatorStateChangedEventPayload {
 // Forma común de un 400 de DRF: { campo: ["mensaje", ...] } o
 // { non_field_errors: [...] } o { detail: "..." }.
 export type ApiErrorBody = Record<string, string[] | string>;
+
+
+// -- Alertas ----------------------------------------------------------
+export type AlertSeverity = "warning" | "critical";
+export type AlertRuleType = "threshold" | "no_signal";
+
+/** Regla de alerta de un sensor (GET /alert-rules/). */
+export interface AlertRule {
+  id: number;
+  sensor: number;
+  sensor_name: string;
+  unit: string;
+  greenhouse: number;
+  name: string;
+  rule_type: AlertRuleType;
+  min_value: number | null;
+  max_value: number | null;
+  duration_seconds: number;
+  severity: AlertSeverity;
+  is_active: boolean;
+  notify_email: boolean;
+  has_active_alert: boolean;
+  created_at: string;
+}
+
+/** Un episodio de alerta (GET /alerts/). */
+export interface Alert {
+  id: number;
+  rule: number | null;
+  rule_name: string;
+  sensor: number;
+  sensor_name: string;
+  unit: string;
+  greenhouse: number;
+  /** "stale" = sin señal: threshold = segundos tolerados; trigger/peak_value = segundos sin datos. */
+  kind: "high" | "low" | "stale";
+  severity: AlertSeverity;
+  status: "active" | "resolved";
+  threshold: number;
+  trigger_value: number;
+  peak_value: number;
+  opened_at: string;
+  resolved_at: string | null;
+  acknowledged_at: string | null;
+  acknowledged_by_name: string | null;
+}

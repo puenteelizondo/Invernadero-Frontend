@@ -1,7 +1,8 @@
 import { NavLink, useParams } from "react-router-dom";
-import { BookMarked, ChevronDown, Cpu, Gauge, LayoutGrid, LogOut, MapPin, Router, Sheet, Sprout, ToggleLeft, Users } from "lucide-react";
+import { BellRing, BookMarked, X, ChevronDown, Cpu, Gauge, LayoutGrid, LogOut, MapPin, Router, Sheet, Sprout, ToggleLeft, Users } from "lucide-react";
 import { useLogout, useMe } from "../hooks/useAuth";
 import { useGreenhouses } from "../hooks/useGreenhouses";
+import { useActiveAlerts } from "../hooks/useAlerts";
 import { formatApiError } from "../lib/api";
 
 function navClass(isActive: boolean) {
@@ -16,15 +17,19 @@ function NavItem({
   to,
   end,
   icon: Icon,
+  badge,
+  onNavigate,
   children,
 }: {
   to: string;
   end?: boolean;
   icon: typeof Cpu;
+  badge?: number;
+  onNavigate?: () => void;
   children: string;
 }) {
   return (
-    <NavLink to={to} end={end} className={({ isActive }) => navClass(isActive)}>
+    <NavLink to={to} end={end} onClick={onNavigate} className={({ isActive }) => navClass(isActive)}>
       {({ isActive }) => (
         <>
           {isActive && <span className="absolute -left-3 top-1/2 h-6 w-1 -translate-y-1/2 rounded-r-full bg-lime-300" />}
@@ -36,23 +41,45 @@ function NavItem({
             <Icon className="h-4 w-4" />
           </span>
           {children}
+          {badge ? (
+            <span className="ml-auto rounded-full bg-red-500 px-2 py-0.5 text-[11px] font-bold text-white shadow">{badge}</span>
+          ) : null}
         </>
       )}
     </NavLink>
   );
 }
 
-export function Sidebar() {
+/**
+ * Menú lateral. En pantallas grandes (>= lg) es una columna fija a la izquierda;
+ * en celular y tablet es un cajón que se abre desde el botón de la barra superior
+ * (ver Layout) y se cierra al elegir una opción, al tocar fuera o con Escape.
+ */
+export function Sidebar({ open = false, onClose = () => {} }: { open?: boolean; onClose?: () => void }) {
   const { id } = useParams();
   const greenhouseId = id ? Number(id) : null;
   const { data: me } = useMe();
   const { data: greenhouses } = useGreenhouses();
+  const { data: activeAlerts } = useActiveAlerts(greenhouseId);
   const logout = useLogout();
 
   const current = greenhouses?.find((g) => g.id === greenhouseId);
 
   return (
-    <aside className="relative z-10 flex h-screen w-64 shrink-0 flex-col overflow-hidden bg-gradient-to-b from-brand-900 via-brand-800 to-emerald-900 text-white shadow-xl shadow-brand-900/30">
+    <>
+    {/* Fondo oscuro detrás del cajón (solo móvil/tablet) */}
+    <div
+      aria-hidden
+      onClick={onClose}
+      className={`fixed inset-0 z-40 bg-brand-900/50 backdrop-blur-sm transition-opacity duration-200 lg:hidden ${
+        open ? "opacity-100" : "pointer-events-none opacity-0"
+      }`}
+    />
+    <aside
+      className={`fixed inset-y-0 left-0 z-50 flex h-dvh w-72 max-w-[85vw] shrink-0 flex-col overflow-hidden bg-gradient-to-b from-brand-900 via-brand-800 to-emerald-900 text-white shadow-xl shadow-brand-900/30 transition-transform duration-200 ease-out lg:sticky lg:top-0 lg:z-10 lg:h-screen lg:w-64 lg:max-w-none lg:translate-x-0 ${
+        open ? "translate-x-0" : "-translate-x-full"
+      }`}
+    >
       {/* Textura de cristal */}
       <div
         aria-hidden
@@ -67,6 +94,14 @@ export function Sidebar() {
       <div aria-hidden className="pointer-events-none absolute -left-16 -top-16 h-52 w-52 rounded-full bg-lime-300/20 blur-3xl" />
       <div aria-hidden className="pointer-events-none absolute -bottom-20 -right-16 h-52 w-52 rounded-full bg-emerald-400/20 blur-3xl" />
 
+      <button
+        type="button"
+        onClick={onClose}
+        aria-label="Cerrar menú"
+        className="absolute right-3 top-3 z-10 rounded-lg p-2 text-white/70 hover:bg-white/10 hover:text-white lg:hidden"
+      >
+        <X className="h-5 w-5" />
+      </button>
       <div className="relative flex items-center gap-3 px-5 py-5">
         <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-lime-300 to-emerald-400 shadow-lg shadow-black/20">
           <Sprout className="h-5 w-5 animate-sway text-brand-900" />
@@ -104,37 +139,42 @@ export function Sidebar() {
       </div>
 
       <nav className="relative flex-1 space-y-1 overflow-y-auto px-4 py-2">
-        <NavItem to="/greenhouses" end icon={LayoutGrid}>
+        <NavItem onNavigate={onClose} to="/greenhouses" end icon={LayoutGrid}>
           Invernaderos
         </NavItem>
-        <NavItem to="/catalog" icon={BookMarked}>
-          Catálogo de tipos
-        </NavItem>
+        {(me?.is_staff || (greenhouses?.length ?? 0) > 0) && (
+          <NavItem onNavigate={onClose} to="/catalog" icon={BookMarked}>
+            Catálogo de tipos
+          </NavItem>
+        )}
 
         {greenhouseId && (
           <>
             <div className="mb-1 mt-5 px-1 text-[11px] font-medium uppercase tracking-wider text-white/50">
               Este invernadero
             </div>
-            <NavItem to={`/greenhouses/${greenhouseId}`} end icon={Gauge}>
+            <NavItem onNavigate={onClose} to={`/greenhouses/${greenhouseId}`} end icon={Gauge}>
               Panel
             </NavItem>
-            <NavItem to={`/greenhouses/${greenhouseId}/sensors`} icon={Cpu}>
+            <NavItem onNavigate={onClose} to={`/greenhouses/${greenhouseId}/sensors`} icon={Cpu}>
               Sensores
             </NavItem>
-            <NavItem to={`/greenhouses/${greenhouseId}/actuators`} icon={ToggleLeft}>
+            <NavItem onNavigate={onClose} to={`/greenhouses/${greenhouseId}/actuators`} icon={ToggleLeft}>
               Actuadores
             </NavItem>
-            <NavItem to={`/greenhouses/${greenhouseId}/zones`} icon={MapPin}>
+            <NavItem onNavigate={onClose} to={`/greenhouses/${greenhouseId}/alerts`} icon={BellRing} badge={activeAlerts?.count}>
+              Alertas
+            </NavItem>
+            <NavItem onNavigate={onClose} to={`/greenhouses/${greenhouseId}/zones`} icon={MapPin}>
               Zonas
             </NavItem>
-            <NavItem to={`/greenhouses/${greenhouseId}/devices`} icon={Router}>
+            <NavItem onNavigate={onClose} to={`/greenhouses/${greenhouseId}/devices`} icon={Router}>
               Dispositivos
             </NavItem>
-            <NavItem to={`/greenhouses/${greenhouseId}/members`} icon={Users}>
+            <NavItem onNavigate={onClose} to={`/greenhouses/${greenhouseId}/members`} icon={Users}>
               Miembros
             </NavItem>
-            <NavItem to={`/greenhouses/${greenhouseId}/export`} icon={Sheet}>
+            <NavItem onNavigate={onClose} to={`/greenhouses/${greenhouseId}/export`} icon={Sheet}>
               Exportar
             </NavItem>
           </>
@@ -165,5 +205,6 @@ export function Sidebar() {
         )}
       </div>
     </aside>
+    </>
   );
 }

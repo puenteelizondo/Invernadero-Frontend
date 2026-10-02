@@ -4,12 +4,15 @@ Panel web para administrar invernaderos, sensores, actuadores y accesos, consumi
 
 ## Qué hace (y qué NO hace) este frontend
 
-- Crea invernaderos, sensores, actuadores y gestiona membresías (invitar por username/email, cambiar rol, quitar acceso).
+- Crea invernaderos, sensores, actuadores, zonas y dispositivos (con rotación de `api_key`), y gestiona membresías (invitar por username/email, cambiar rol, quitar acceso).
 - Muestra lecturas de sensores y estado de actuadores **en vivo** vía WebSocket, con historial y gráfica para cada sensor.
+- **Alertas:** reglas por sensor (umbral alto/bajo con duración, o aviso de "sin señal"), alertas activas con aviso en el panel, historial paginado, reconocer alertas y limpiar las ya resueltas (solo propietarios).
+- **Catálogo de tipos** con dos alcances: globales (los administra staff) y propios de cada invernadero (los administra su propietario). El enlace del menú solo aparece cuando ya hay un invernadero.
 - Enciende/apaga actuadores a mano.
 - Exporta un invernadero a Excel.
-- A propósito, **nunca** manda una lectura de sensor manualmente. Ese dato lo generan los controladores físicos (Arduino/ESP32/Raspberry Pi, etc.) llamando a `POST /api/v1/readings/` con su propia `X-Device-Key`. Este frontend es de solo-lectura para lecturas: verlas, graficarlas, exportarlas — nunca escribirlas.
-- Para sensores/actuadores nuevos, ofrece una lista de **tipos predesignados** (con ícono y unidad/rango sugeridos) que hacen match con el catálogo real (`SensorType`/`ActuatorType`) del backend por su `code`. Un usuario normal solo puede elegir entre tipos que ya existen en ese catálogo; un usuario `staff` además puede sembrar tipos nuevos con un clic usando esos valores sugeridos (el backend exige `IsAdminUser` para crear tipos — ver `apps/sensors/views.py` y `apps/actuators/views.py` en el backend).
+- A propósito, **nunca** manda una lectura de sensor manualmente. Ese dato lo generan los controladores físicos (Arduino/ESP32/Raspberry Pi, etc.) llamando al endpoint de ingesta del backend con su propia `X-Device-Key`. Este frontend es de solo-lectura para lecturas: verlas, graficarlas, exportarlas — nunca escribirlas.
+- Para sensores/actuadores nuevos, ofrece una lista de **tipos predesignados** (con ícono y unidad/rango sugeridos) que hacen match con el catálogo real del backend por su `code`.
+- **Responsivo:** se adapta a celular, tablet y escritorio (ver la sección "Diseño adaptable").
 
 ## Stack
 
@@ -49,7 +52,7 @@ Así, desde el punto de vista del navegador, todo vive en `http://localhost:5173
 
 1. Pide un token corto de un solo uso: `POST /api/v1/realtime/ws-token/` con `{ greenhouse: <id> }` (requiere sesión y ser miembro del invernadero).
 2. Abre `ws://.../ws/greenhouses/<id>/?token=...` (vía el proxy de Vite).
-3. Recibe un evento `snapshot` inicial y después `sensor_reading` / `actuator_state_changed` en vivo, que actualizan la UI y invalidan las queries de historial correspondientes.
+3. Recibe un evento `snapshot` inicial y después `sensor_reading` / `actuator_state_changed` / `alert_opened` / `alert_resolved` / `alert_acknowledged` en vivo, que actualizan la UI y invalidan las queries de historial correspondientes.
 4. Si el socket se cae, reconecta solo con backoff exponencial (pidiendo un token nuevo cada vez, porque el anterior ya expiró).
 
 ## Estructura
@@ -64,15 +67,28 @@ src/
     actuatorPresets.ts      Catálogo de actuadores predesignados
   hooks/
     useAuth.ts            Login/logout/registro/recuperación + sesión actual
-    useGreenhouses.ts      Todo el CRUD contra la API (invernaderos, sensores, actuadores, membresías, export)
+    useGreenhouses.ts      CRUD contra la API (invernaderos, sensores, actuadores, zonas, dispositivos, membresías, export)
+    useAlerts.ts           Reglas de alerta, alertas activas/historial, reconocer y limpiar
     useRealtime.ts         WebSocket por invernadero
   components/              Layout, Sidebar, badges, primitivas de UI (Button, Card, Modal...)
   pages/                   Una página por ruta
 ```
 
+## Diseño adaptable
+
+Breakpoints de Tailwind: celular (< 640 px), tablet (640–1023 px) y escritorio (≥ 1024 px, `lg`).
+
+- **Menú:** en escritorio es una columna fija a la izquierda. En celular y tablet se convierte en un cajón que se abre con el botón de la barra superior (que queda fija) y se cierra al elegir una opción, al tocar fuera o con Escape (`Layout.tsx` + `Sidebar.tsx`).
+- **Ventanas emergentes (`Modal` en `components/ui.tsx`):** en celular salen desde abajo como una hoja y hacen scroll interno; en pantallas grandes se centran.
+- **Listas y tarjetas:** las acciones se reacomodan en varias líneas en vez de desbordarse; los textos largos y códigos se truncan o se parten.
+- **Táctil:** botones e íconos de acción con área de toque cómoda (≥ 40 px).
+- Se usa `dvh` para que la barra del navegador móvil no tape contenido.
+
+Al agregar páginas nuevas, revisa que no haya scroll horizontal a 375 px de ancho (en Chrome: `F12` → `Ctrl+Shift+M`).
+
 ## Cómo correrlo
 
-Requiere que el backend (`Invernadero-Backend`) esté corriendo en `http://localhost:8000` (por ejemplo con `docker compose up`).
+Requiere que el backend (`Invernadero-Backend`) esté corriendo en `http://localhost:8000` (por ejemplo con `docker compose up -d`).
 
 ```bash
 npm install
@@ -86,10 +102,49 @@ npm run build   # genera dist/
 npm run preview # sirve dist/ localmente para probarlo
 ```
 
+### Abrirlo desde otro equipo de la red (celular, tablet)
+
+1. Averigua la IP de tu PC (`ipconfig` en Windows, la IPv4 del Wi-Fi), por ejemplo `192.168.100.55`.
+2. En el `.env` del **backend**, agrega esa IP a:
+   ```
+   DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,192.168.100.55
+   CORS_ALLOWED_ORIGINS=http://localhost:5173,http://192.168.100.55:5173
+   CSRF_TRUSTED_ORIGINS=http://localhost:5173,http://192.168.100.55:5173
+   ```
+   y reinicia con `docker compose up -d`.
+3. Arranca el frontend exponiéndolo a la red:
+   ```bash
+   npm run dev -- --host
+   ```
+4. En Windows, permite los puertos 5173 y 8000 en el firewall para redes privadas.
+5. Desde el celular (mismo Wi-Fi) abre `http://192.168.100.55:5173`.
+
+Es HTTP sin cifrar: úsalo solo en una red de confianza. Si la IP de tu PC cambia, actualiza el `.env`.
+
+## Con Docker (correrlo donde sea)
+
+El frontend se empaqueta en una imagen de nginx: compila la app y la sirve, y reenvía `/api` y `/ws` al backend. Para el navegador todo sigue siendo un solo origen, igual que con el proxy de Vite, así que las cookies y el CSRF funcionan sin CORS.
+
+```bash
+docker compose up -d --build
+```
+
+Abre `http://localhost:8080` (o `http://<IP-de-la-PC>:8080` desde otro equipo). Variables opcionales, en un `.env` junto al `docker-compose.yml`:
+
+| Variable | Por defecto | Para qué |
+|---|---|---|
+| `FRONTEND_PORT` | `8080` | Puerto donde se publica el frontend |
+| `BACKEND_URL` | `http://host.docker.internal:8000` | Dónde está el backend. Si está en otra máquina: `http://192.168.100.20:8000` |
+
+Notas:
+- nginx reenvía el `Host` original, así que en el `.env` del **backend** solo hace falta agregar el host o IP desde donde se abre el frontend en `DJANGO_ALLOWED_HOSTS` (no hace falta tocar `CSRF_TRUSTED_ORIGINS`).
+- Si el frontend y el backend están en el mismo `docker-compose`, pon `BACKEND_URL=http://web:8000`.
+- Para HTTPS, pon un proxy con certificado delante (Caddy, Traefik, nginx del servidor, Cloudflare Tunnel) y el backend deberá confiar en `X-Forwarded-Proto` (`SECURE_PROXY_SSL_HEADER`).
+- Cambiar `BACKEND_URL` no requiere recompilar: basta `docker compose up -d`.
+
 ## Pendientes / ideas para seguir
 
 - Code-splitting (el bundle actual pasa los 500 kB; recharts y react-router pueden ir en chunks separados).
 - Paginación real en `/readings/` (cursor) para historiales muy largos — hoy se pide la primera página.
 - Notificaciones toast en vez de solo texto de error inline.
-- Página de gestión de dispositivos (`Device`, rotación de `api_key`) — el hook `useDevices`/`useCreateDevice`/`useRotateDeviceKey` ya existe en `useGreenhouses.ts`, falta la página.
 - Tema oscuro.

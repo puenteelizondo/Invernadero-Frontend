@@ -14,6 +14,7 @@ import { DeviceDetailPage } from "./pages/DeviceDetailPage";
 import { DevicesPage } from "./pages/DevicesPage";
 import { MembershipsPage } from "./pages/MembershipsPage";
 import { ExportPage } from "./pages/ExportPage";
+import { AlertsPage } from "./pages/AlertsPage";
 import { CatalogPage } from "./pages/CatalogPage";
 import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
@@ -80,6 +81,14 @@ export function App() {
         element={
           <ProtectedRoute>
             <ActuatorDetailPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/greenhouses/:id/alerts"
+        element={
+          <ProtectedRoute>
+            <AlertsPage />
           </ProtectedRoute>
         }
       />

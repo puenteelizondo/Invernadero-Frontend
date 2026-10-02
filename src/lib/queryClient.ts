@@ -37,4 +37,8 @@ export const qk = {
   devices: (greenhouseId: number) => ["devices", greenhouseId] as const,
   zones: (greenhouseId: number) => ["zones", greenhouseId] as const,
   memberships: (greenhouseId: number) => ["memberships", greenhouseId] as const,
+  alertRules: (greenhouseId: number) => ["alert-rules", greenhouseId] as const,
+  // Prefijo común de todas las listas de alertas de un invernadero (para invalidar de golpe).
+  alertsAll: (greenhouseId: number) => ["alerts", greenhouseId] as const,
+  alerts: (greenhouseId: number, status: string, page: number) => ["alerts", greenhouseId, status, page] as const,
 };

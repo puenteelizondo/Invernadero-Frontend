@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { ActiveAlertsBanner } from "../components/ActiveAlertsBanner";
 import { useParams, Link, useNavigate } from "react-router-dom";
 import { Activity, Cpu, MapPin, Power, Settings, Sheet, Sprout, ToggleLeft, Users } from "lucide-react";
 import {
@@ -70,7 +71,7 @@ export function GreenhouseDashboardPage() {
             {greenhouse.description && <p className="mt-1 max-w-xl text-sm text-white/75">{greenhouse.description}</p>}
             <p className="mt-2 text-xs text-white/60">Zona horaria: {greenhouse.timezone}</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <ConnectionBadge status={status} />
             <Link to={`/greenhouses/${greenhouseId}/export`}>
               <Button variant="secondary">
@@ -92,6 +93,8 @@ export function GreenhouseDashboardPage() {
         onClose={() => setSettingsOpen(false)}
         onDeleted={() => navigate("/greenhouses", { replace: true })}
       />
+
+      <ActiveAlertsBanner greenhouseId={greenhouseId} />
 
       <div className="mb-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
         {[

@@ -208,7 +208,7 @@ void loop() {
                     {s.name}
                     <span className="ml-2 text-xs text-neutral-400">{s.sensor_type_name}</span>
                   </Link>
-                  <span className="inline-flex items-center rounded-md bg-brand-50 pl-1.5 font-mono text-[11px] font-medium text-brand-700">
+                  <span className="inline-flex max-w-full items-center rounded-md bg-brand-50 pl-1.5 font-mono text-[11px] font-medium text-brand-700">
                     sensor_id {s.id}
                     <CopyButton text={String(s.id)} className="!px-1 !py-0.5" />
                   </span>
@@ -231,7 +231,7 @@ void loop() {
                     {a.name}
                     <span className="ml-2 text-xs text-neutral-400">{a.actuator_type_name}</span>
                   </Link>
-                  <span className="inline-flex items-center rounded-md bg-brand-50 pl-1.5 font-mono text-[11px] font-medium text-brand-700">
+                  <span className="inline-flex max-w-full items-center rounded-md bg-brand-50 pl-1.5 font-mono text-[11px] font-medium text-brand-700">
                     actuator_id {a.id}
                     <CopyButton text={String(a.id)} className="!px-1 !py-0.5" />
                   </span>

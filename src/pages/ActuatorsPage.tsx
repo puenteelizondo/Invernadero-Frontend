@@ -139,23 +139,25 @@ export function ActuatorsPage() {
                   on ? "border-emerald-200 bg-gradient-to-br from-white to-emerald-50" : "bg-gradient-to-br from-white to-neutral-50"
                 }`}
               >
-                <button
-                  onClick={() => setEditing(a)}
-                  className="absolute right-10 top-3 z-10 rounded-lg p-1 text-neutral-400 hover:bg-brand-50 hover:text-brand-700"
-                  title="Editar"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setToDelete(a.id)}
-                  className="absolute right-3 top-3 rounded-lg p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
-                  title="Eliminar"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="absolute right-3 top-3 z-10 flex gap-1">
+                  <button
+                    onClick={() => setEditing(a)}
+                    className="rounded-lg p-2 text-neutral-400 hover:bg-brand-50 hover:text-brand-700 sm:p-1"
+                    title="Editar"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    onClick={() => setToDelete(a.id)}
+                    className="rounded-lg p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600 sm:p-1"
+                    title="Eliminar"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
                 <Link
                   to={`/greenhouses/${greenhouseId}/actuators/${a.id}`}
-                  className="mb-3 flex items-center gap-3 pr-8"
+                  className="mb-3 flex items-center gap-3 pr-16"
                 >
                   <ActuatorGauge
                     code={actuatorTypeCodeById.get(a.actuator_type) ?? ""}
@@ -166,7 +168,7 @@ export function ActuatorsPage() {
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-neutral-900">{a.name}</p>
                     <p className="text-xs text-neutral-500">{a.actuator_type_name}</p>
-                    <span className="mt-1 inline-flex items-center rounded-md bg-brand-50 pl-1.5 font-mono text-[11px] font-medium text-brand-700">
+                    <span className="mt-1 inline-flex max-w-full items-center rounded-md bg-brand-50 pl-1.5 font-mono text-[11px] font-medium text-brand-700">
                       ID {a.id}
                       <CopyButton text={String(a.id)} className="!px-1 !py-0.5" />
                     </span>
@@ -183,11 +185,12 @@ export function ActuatorsPage() {
                   <button
                     onClick={() => setState.mutate({ id: a.id, state: !on })}
                     disabled={setState.isPending}
-                    className={`relative h-6 w-11 rounded-full transition ${on ? "bg-brand-600" : "bg-neutral-300"}`}
+                    aria-label={on ? "Apagar" : "Encender"}
+                    className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-brand-600" : "bg-neutral-300"}`}
                   >
                     <span
-                      className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition ${
-                        on ? "left-5" : "left-0.5"
+                      className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${
+                        on ? "left-[1.375rem]" : "left-0.5"
                       }`}
                     />
                   </button>

@@ -176,7 +176,7 @@ export function CatalogPage() {
                 {t.can_edit && (<div className="absolute right-3 top-3 flex gap-1">
                   <button
                     onClick={() => openEdit(t)}
-                    className="rounded-lg p-1 text-neutral-400 hover:bg-brand-50 hover:text-brand-700"
+                    className="rounded-lg p-2 text-neutral-400 sm:p-1 hover:bg-brand-50 hover:text-brand-700"
                     title="Editar"
                   >
                     <Pencil className="h-4 w-4" />
@@ -186,7 +186,7 @@ export function CatalogPage() {
                       remove.reset();
                       setToDelete({ id: t.id, name: t.name });
                     }}
-                    className="rounded-lg p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                    className="rounded-lg p-2 text-neutral-400 sm:p-1 hover:bg-red-50 hover:text-red-600"
                     title="Eliminar"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -201,7 +201,7 @@ export function CatalogPage() {
                   </span>
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-neutral-900">{t.name}</p>
-                    <p className="font-mono text-xs text-neutral-500">{t.code}</p>
+                    <p className="break-all font-mono text-xs text-neutral-500">{t.code}</p>
                   </div>
                 </div>
                 <span className={`mb-2 inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium ${t.greenhouse == null ? "bg-sky-50 text-sky-700" : "bg-amber-50 text-amber-700"}`}>

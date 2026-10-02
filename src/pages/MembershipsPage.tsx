@@ -63,18 +63,18 @@ export function MembershipsPage() {
         <Card>
           <ul className="divide-y divide-brand-50">
             {memberships.map((m) => (
-              <li key={m.id} className="flex items-center justify-between py-3">
-                <div className="flex items-center gap-3">
-                  <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-emerald-400 text-sm font-bold uppercase text-white shadow-sm">
+              <li key={m.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-emerald-400 text-sm font-bold uppercase text-white shadow-sm">
                     {m.username[0]}
                   </span>
-                  <div>
-                    <p className="font-semibold text-neutral-900">{m.username}</p>
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold text-neutral-900">{m.username}</p>
                     <p className="text-xs text-neutral-400">Desde {new Date(m.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="w-32">
+                  <div className="w-full min-w-0 flex-1 sm:w-32 sm:flex-none">
                   <Select
                     className="!py-1.5"
                     value={m.role}
@@ -90,7 +90,7 @@ export function MembershipsPage() {
                   <RoleBadge role={m.role} />
                   <button
                     onClick={() => setToRemove(m.id)}
-                    className="rounded-lg p-1.5 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                    className="rounded-lg p-2.5 text-neutral-400 hover:bg-red-50 hover:text-red-600"
                     title="Quitar acceso"
                   >
                     <Trash2 className="h-4 w-4" />

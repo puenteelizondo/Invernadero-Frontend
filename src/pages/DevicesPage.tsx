@@ -109,14 +109,14 @@ export function DevicesPage() {
                 <div className="absolute right-3 top-3 flex gap-1">
                   <button
                     onClick={() => setToRotate(d.id)}
-                    className="rounded-lg p-1 text-neutral-400 hover:bg-brand-50 hover:text-brand-700"
+                    className="rounded-lg p-2 text-neutral-400 sm:p-1 hover:bg-brand-50 hover:text-brand-700"
                     title="Rotar clave"
                   >
                     <RefreshCw className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setToDelete(d.id)}
-                    className="rounded-lg p-1 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                    className="rounded-lg p-2 text-neutral-400 sm:p-1 hover:bg-red-50 hover:text-red-600"
                     title="Eliminar"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -130,7 +130,7 @@ export function DevicesPage() {
                     <p className="flex items-center gap-1 text-xs text-neutral-500">
                       <KeyRound className="h-3 w-3" /> {d.key_prefix}…
                     </p>
-                    <span className="mt-1 inline-flex items-center rounded-md bg-brand-50 pl-1.5 font-mono text-[11px] font-medium text-brand-700">
+                    <span className="mt-1 inline-flex max-w-full items-center rounded-md bg-brand-50 pl-1.5 font-mono text-[11px] font-medium text-brand-700">
                       ID {d.id}
                       <CopyButton text={String(d.id)} className="!px-1 !py-0.5" />
                     </span>

@@ -154,6 +154,15 @@ export function useRealtime(greenhouseId: number | null) {
         return;
       }
 
+      if (msg.event === "alert_opened" || msg.event === "alert_resolved" || msg.event === "alert_acknowledged") {
+        // Las alertas se leen por HTTP (para tener historial paginado); el evento solo avisa que cambiaron.
+        if (greenhouseId) {
+          qc.invalidateQueries({ queryKey: qk.alertsAll(greenhouseId) });
+          qc.invalidateQueries({ queryKey: qk.alertRules(greenhouseId) });
+        }
+        return;
+      }
+
       if (msg.event === "actuator_state_changed") {
         const payload = msg.payload as ActuatorStateChangedEventPayload;
         setSnapshot((prev) => {

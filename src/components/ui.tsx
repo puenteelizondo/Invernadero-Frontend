@@ -165,12 +165,12 @@ export function Modal({
       : "from-brand-600 to-emerald-500";
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-brand-900/40 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-end justify-center bg-brand-900/40 backdrop-blur-sm sm:items-center sm:p-4"
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="w-full max-w-lg animate-rise overflow-hidden rounded-3xl bg-white shadow-2xl shadow-brand-900/30">
+      <div className="w-full max-w-lg animate-rise overflow-hidden rounded-t-3xl bg-white shadow-2xl shadow-brand-900/30 sm:rounded-3xl">
         <div className={`relative flex items-center justify-between bg-gradient-to-r ${header} px-5 py-4 text-white`}>
           <div
             aria-hidden
@@ -194,7 +194,7 @@ export function Modal({
             <X className="h-4 w-4" />
           </button>
         </div>
-        <div className="max-h-[75vh] overflow-y-auto p-6 text-base [&_.text-sm]:text-base [&_.text-xs]:text-sm">{children}</div>
+        <div className="max-h-[80dvh] overflow-y-auto p-5 text-base sm:max-h-[75vh] sm:p-6 [&_.text-sm]:text-base [&_.text-xs]:text-sm">{children}</div>
       </div>
     </div>
   );
@@ -209,6 +209,7 @@ export function ConfirmDialog({
   loading,
   error,
   extra,
+  body,
   onConfirm,
   onCancel,
 }: {
@@ -222,12 +223,15 @@ export function ConfirmDialog({
   error?: string | null;
   /** Acción alternativa opcional, a la izquierda de los botones. */
   extra?: ReactNode;
+  /** Contenido opcional debajo del mensaje (p. ej. un selector de opciones). */
+  body?: ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 }) {
   return (
     <Modal open={open} onClose={onCancel} title={title} icon={AlertTriangle} tone={danger ? "danger" : "brand"}>
       <p className="text-sm leading-relaxed text-neutral-600">{message}</p>
+      {body}
       {error && (
         <div className="mt-3">
           <ErrorText>{error}</ErrorText>

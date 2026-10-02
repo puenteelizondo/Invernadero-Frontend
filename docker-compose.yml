@@ -1,0 +1,16 @@
+services:
+  frontend:
+    build: .
+    image: invernadero-frontend
+    container_name: invernadero-frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-8080}:80"
+    environment:
+      # Dónde está el backend. Por defecto, el backend de Docker publicado en
+      # el puerto 8000 de esta misma máquina. Si está en otra máquina:
+      #   BACKEND_URL=http://192.168.100.20:8000
+      BACKEND_URL: ${BACKEND_URL:-http://host.docker.internal:8000}
+    extra_hosts:
+      # Permite usar host.docker.internal también en Linux
+      - "host.docker.internal:host-gateway"
