@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import type { Actuator } from "../types";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { Pencil, Plus, ToggleLeft, Trash2 } from "lucide-react";
+import { Pencil, Plus, SlidersHorizontal, ToggleLeft, Trash2 } from "lucide-react";
 import {
   useActuatorTypesFor,
   useCanManageGreenhouse,
@@ -17,6 +17,7 @@ import {
 } from "../hooks/useGreenhouses";
 import { useMe } from "../hooks/useAuth";
 import { useRealtime } from "../hooks/useRealtime";
+import { useControlLoops } from "../hooks/useControl";
 import { ACTUATOR_PRESETS, findActuatorPreset, type ActuatorPreset } from "../lib/actuatorPresets";
 import { formatApiError } from "../lib/api";
 import { Layout } from "../components/Layout";
@@ -27,6 +28,8 @@ import { PurgeSensorModal as PurgeModal } from "../components/PurgeSensorModal";
 import { CopyButton } from "../components/CopyButton";
 import { ConnectionBadge } from "../components/ConnectionBadge";
 import { Button, Card, ConfirmDialog, EmptyState, ErrorText, Input, Label, Modal, PageHeader, Select, Spinner } from "../components/ui";
+
+const MODE_LABEL: Record<string, string> = { on_off: "On/Off", p: "P", pi: "PI", pid: "PID" };
 
 export function ActuatorsPage() {
   const { id } = useParams();
@@ -39,7 +42,9 @@ export function ActuatorsPage() {
   const actuatorTypeCodeById = useActuatorTypeCodeMap();
   const { data: devices } = useDevices(greenhouseId);
   const { data: zones } = useZones(greenhouseId);
-  const { status, snapshot } = useRealtime(greenhouseId);
+  const { status, snapshot, telemetry } = useRealtime(greenhouseId);
+  const { data: loops } = useControlLoops(greenhouseId);
+  const loopByActuator = new Map((loops ?? []).map((l) => [l.actuator, l]));
   const createActuator = useCreateActuator(greenhouseId);
   const createActuatorType = useCreateActuatorType();
   const deleteActuator = useDeleteActuator(greenhouseId);
@@ -131,7 +136,13 @@ export function ActuatorsPage() {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {actuators.map((a) => {
             const live = liveByActuator.get(a.id);
-            const on = live ? live.state : a.state;
+            // Si un lazo de control ACTIVO maneja el actuador, manda el ESP32: se muestra
+            // su salida en % (telemetría en vivo) y el interruptor manual se bloquea.
+            const loop = loopByActuator.get(a.id);
+            const auto = !!loop && loop.enabled && loop.mode !== "off";
+            const pts = loop ? telemetry[loop.id] : undefined;
+            const output = auto ? (pts?.[pts.length - 1]?.output ?? loop!.last_telemetry?.output ?? null) : null;
+            const on = auto && output != null ? output > 0 : live ? live.state : a.state;
             return (
               <Card
                 key={a.id}
@@ -174,6 +185,46 @@ export function ActuatorsPage() {
                     </span>
                   </div>
                 </Link>
+                {loop && (
+                  <Link
+                    to={`/greenhouses/${greenhouseId}/control`}
+                    className="mb-3 flex items-center gap-1.5 rounded-lg bg-brand-50 px-2.5 py-1.5 text-xs text-brand-800 hover:bg-brand-100"
+                    title="Ver en Control"
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                    <span className="truncate">
+                      Lazo <b>{loop.name}</b> · {auto ? MODE_LABEL[loop.mode] ?? loop.mode : "Apagado (manejo manual)"}
+                    </span>
+                  </Link>
+                )}
+                {auto ? (
+                  <div>
+                    <div className="mb-1 flex items-baseline justify-between gap-2 text-xs">
+                      <span className="text-neutral-500">
+                        {!loop!.device_online ? "ESP32 sin conexión" : output == null ? "Esperando al ESP32…" : "Salida que calcula el ESP32"}
+                      </span>
+                      <span className="num text-lg font-semibold text-neutral-900">
+                        {output == null ? "—" : `${Math.round(output)} %`}
+                      </span>
+                    </div>
+                    <div
+                      className="h-2.5 overflow-hidden rounded-full bg-neutral-100"
+                      role="meter"
+                      aria-label={`Salida de ${a.name}`}
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={output == null ? undefined : Math.round(output)}
+                    >
+                      <div
+                        className="h-full rounded-full bg-brand-600 transition-[width] duration-500 ease-leaf"
+                        style={{ width: `${Math.max(0, Math.min(100, output ?? 0))}%` }}
+                      />
+                    </div>
+                    <p className="mt-1.5 text-[11px] leading-snug text-neutral-500">
+                      Lo maneja el lazo; el interruptor manual está bloqueado. Para manejarlo a mano, pon el lazo en Apagado.
+                    </p>
+                  </div>
+                ) : (
                 <div className="flex items-center justify-between">
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -197,6 +248,7 @@ export function ActuatorsPage() {
                     />
                   </button>
                 </div>
+                )}
               </Card>
             );
           })}
