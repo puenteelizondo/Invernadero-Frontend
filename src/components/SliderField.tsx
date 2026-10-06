@@ -61,16 +61,20 @@ export function SliderField({
 
   return (
     <div className={`rounded-xl border p-3 transition-colors ${changed ? "border-brand-400 bg-brand-50/70" : "border-neutral-200 bg-surface"}`}>
-      <div className="flex items-center justify-between gap-3">
-        <label htmlFor={`${id}-n`} className="text-sm font-semibold text-neutral-800">
-          {label}
+      {/* El nombre puede partirse en dos renglones; el campo numérico NUNCA se encoge ni
+          se sale de la tarjeta (antes la etiqueta "modificado" lo empujaba hacia afuera). */}
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0 flex-1">
+          <label htmlFor={`${id}-n`} className="block break-words text-sm font-semibold leading-snug text-neutral-800">
+            {label}
+          </label>
           {changed && (
-            <span className="ml-2 rounded-full bg-brand-600 px-1.5 py-0.5 align-middle text-[10px] font-bold uppercase tracking-wide text-white dark:bg-brand-500">
+            <span className="mt-1 inline-block rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold uppercase leading-none tracking-wide text-white dark:bg-brand-500">
               modificado
             </span>
           )}
-        </label>
-        <span className="flex items-center gap-1.5">
+        </div>
+        <span className="flex shrink-0 items-center gap-1">
           <input
             id={`${id}-n`}
             type="text"
@@ -82,11 +86,11 @@ export function SliderField({
             onFocus={() => setFocused(true)}
             onBlur={() => setFocused(false)}
             onChange={(e) => commit(e.target.value)}
-            className={`num h-9 w-24 rounded-lg border bg-surface px-2 text-right text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-4 disabled:opacity-60 ${
+            className={`num h-9 w-[4.75rem] rounded-lg border bg-surface px-2 text-right text-sm font-semibold text-neutral-900 focus:outline-none focus:ring-4 disabled:opacity-60 sm:w-24 ${
               invalid ? "border-red-400 focus:ring-red-500/20" : "border-neutral-200 focus:border-brand-500 focus:ring-brand-500/15"
             }`}
           />
-          {unit && <span className="w-8 text-xs font-medium text-neutral-500">{unit}</span>}
+          {unit && <span className="text-xs font-medium text-neutral-500">{unit}</span>}
         </span>
       </div>
       <input
