@@ -136,20 +136,20 @@ export function ActuatorsPage() {
               <Card
                 key={a.id}
                 className={`relative overflow-hidden transition duration-300 ${
-                  on ? "border-emerald-200 bg-gradient-to-br from-white to-emerald-50" : "bg-gradient-to-br from-white to-neutral-50"
+                  on ? "border-emerald-200 bg-surface" : "bg-surface"
                 }`}
               >
                 <div className="absolute right-3 top-3 z-10 flex gap-1">
                   <button
                     onClick={() => setEditing(a)}
-                    className="rounded-lg p-2 text-neutral-400 hover:bg-brand-50 hover:text-brand-700 sm:p-1"
+                    className="rounded-lg p-2 text-neutral-500 hover:bg-brand-50 hover:text-brand-700 sm:p-1"
                     title="Editar"
                   >
                     <Pencil className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setToDelete(a.id)}
-                    className="rounded-lg p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600 sm:p-1"
+                    className="rounded-lg p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600 sm:p-1"
                     title="Eliminar"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -185,11 +185,13 @@ export function ActuatorsPage() {
                   <button
                     onClick={() => setState.mutate({ id: a.id, state: !on })}
                     disabled={setState.isPending}
-                    aria-label={on ? "Apagar" : "Encender"}
-                    className={`relative h-7 w-12 shrink-0 rounded-full transition ${on ? "bg-brand-600" : "bg-neutral-300"}`}
+                    role="switch"
+                    aria-checked={on}
+                    aria-label={`${a.name}: ${on ? "apagar" : "encender"}`}
+                    className={`relative h-7 w-12 shrink-0 rounded-full transition-colors duration-300 disabled:opacity-60 ${on ? "bg-brand-600" : "bg-neutral-300"}`}
                   >
                     <span
-                      className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition ${
+                      className={`absolute top-0.5 h-6 w-6 rounded-full bg-white shadow transition-all duration-300 ease-leaf ${
                         on ? "left-[1.375rem]" : "left-0.5"
                       }`}
                     />
@@ -328,9 +330,9 @@ export function ActuatorsPage() {
             <p className="mb-3 text-sm text-neutral-600">
               <b>{created.name}</b> ya existe. Este es su <code>actuator_id</code>:
             </p>
-            <div className="mb-4 flex items-center justify-between rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-4">
+            <div className="mb-4 flex items-center justify-between rounded-2xl border border-brand-200 bg-brand-50/60 p-4">
               <p className="font-mono text-4xl font-bold text-brand-900">{created.id}</p>
-              <CopyButton text={String(created.id)} label="Copiar ID" className="border border-brand-200 bg-white" />
+              <CopyButton text={String(created.id)} label="Copiar ID" className="border border-brand-200 bg-surface" />
             </div>
             <div className="mt-5 flex justify-end gap-2 border-t border-brand-50 pt-4">
               <Button variant="secondary" onClick={() => setCreated(null)}>

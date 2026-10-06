@@ -90,7 +90,7 @@ export function SensorGauge({
       </svg>
 
       {!hasRange && size >= 48 && (
-        <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] text-neutral-400">
+        <span className="absolute -bottom-4 left-1/2 -translate-x-1/2 whitespace-nowrap text-[10px] text-neutral-500">
           sin rango
         </span>
       )}

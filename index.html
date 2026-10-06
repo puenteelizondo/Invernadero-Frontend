@@ -2,8 +2,26 @@
 <html lang="es">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#E9F0E7" />
+    <meta name="description" content="Monitoreo en tiempo real de invernaderos" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Invernadero</title>
+    <script>
+      // Aplica el tema antes de pintar, para que no parpadee en blanco al
+      // abrir en modo oscuro. Ver src/lib/theme.ts.
+      (function () {
+        try {
+          var pref = localStorage.getItem("theme") || "system";
+          var dark = pref === "dark" || (pref === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
+          if (dark) document.documentElement.classList.add("dark");
+          document.querySelector('meta[name="theme-color"]').setAttribute("content", dark ? "#0D1812" : "#E9F0E7");
+          var motion = localStorage.getItem("motion");
+          if (motion === "full") document.documentElement.classList.add("motion-full");
+          if (motion === "reduced") document.documentElement.classList.add("motion-reduce");
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

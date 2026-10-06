@@ -93,12 +93,12 @@ GET /api/v1/actuators/${actuator.id}/`;
         </div>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-200 bg-brand-50/60 p-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-brand-700">ID del actuador (actuator_id)</p>
           <p className="font-mono text-4xl font-bold text-brand-900">{actuator.id}</p>
         </div>
-        <CopyButton text={String(actuator.id)} label="Copiar ID" className="border border-brand-200 bg-white" />
+        <CopyButton text={String(actuator.id)} label="Copiar ID" className="border border-brand-200 bg-surface" />
       </div>
 
       <p className="mb-4 flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">

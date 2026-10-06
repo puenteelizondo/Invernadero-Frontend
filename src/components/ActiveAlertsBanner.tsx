@@ -16,11 +16,14 @@ export function ActiveAlertsBanner({ greenhouseId }: { greenhouseId: number }) {
   return (
     <Link
       to={`/greenhouses/${greenhouseId}/alerts`}
-      className={`mb-5 flex items-center gap-3 rounded-2xl border px-4 py-3 text-sm shadow-sm transition hover:shadow-md ${
+      className={`mb-5 flex items-center gap-3 rounded-2xl border px-3 py-2.5 text-sm shadow-sm transition hover:shadow-md ${
         critical ? "border-red-200 bg-red-50 text-red-800" : "border-amber-200 bg-amber-50 text-amber-800"
       }`}
     >
-      <AlertTriangle className="h-5 w-5 shrink-0" />
+      <span className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${critical ? "bg-red-100" : "bg-amber-100"}`} aria-hidden>
+        {critical && <span className="absolute inset-0 animate-ping1 rounded-xl bg-red-400/40" />}
+        <AlertTriangle className="relative h-5 w-5" />
+      </span>
       <span className="min-w-0 flex-1">
         <b>{data?.count === 1 ? "1 alerta activa" : `${data?.count} alertas activas`}</b>
         {" · "}

@@ -103,20 +103,20 @@ export function DevicesPage() {
               <Card
                 key={d.id}
                 className={`relative overflow-hidden transition duration-300 ${
-                  status === "online" ? "border-emerald-200 bg-gradient-to-br from-white to-emerald-50" : "bg-gradient-to-br from-white to-neutral-50"
+                  status === "online" ? "border-emerald-200 bg-surface" : "bg-surface"
                 }`}
               >
                 <div className="absolute right-3 top-3 flex gap-1">
                   <button
                     onClick={() => setToRotate(d.id)}
-                    className="rounded-lg p-2 text-neutral-400 sm:p-1 hover:bg-brand-50 hover:text-brand-700"
+                    className="rounded-lg p-2 text-neutral-500 sm:p-1 hover:bg-brand-50 hover:text-brand-700"
                     title="Rotar clave"
                   >
                     <RefreshCw className="h-4 w-4" />
                   </button>
                   <button
                     onClick={() => setToDelete(d.id)}
-                    className="rounded-lg p-2 text-neutral-400 sm:p-1 hover:bg-red-50 hover:text-red-600"
+                    className="rounded-lg p-2 text-neutral-500 sm:p-1 hover:bg-red-50 hover:text-red-600"
                     title="Eliminar"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -146,7 +146,7 @@ export function DevicesPage() {
                     />
                     {STATUS_LABEL[status]}
                   </span>
-                  <span className="text-neutral-400">{d.last_seen_at ? timeAgo(d.last_seen_at) : ""}</span>
+                  <span className="text-neutral-500">{d.last_seen_at ? timeAgo(d.last_seen_at) : ""}</span>
                 </div>
                 <div className="mt-3 flex items-center gap-3 border-t border-brand-50 pt-3 text-xs text-neutral-500">
                   <span className="inline-flex items-center gap-1">
@@ -167,7 +167,7 @@ export function DevicesPage() {
           <div className="mb-4">
             <Label>Nombre del dispositivo</Label>
             <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="ESP32-Zona-Norte" autoFocus required />
-            <p className="mt-1 text-xs text-neutral-400">
+            <p className="mt-1 text-xs text-neutral-500">
               Si el nombre incluye "Arduino" o "Raspberry", se dibuja esa placa; si no, un ESP32.
             </p>
           </div>

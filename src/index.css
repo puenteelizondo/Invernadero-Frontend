@@ -2,12 +2,107 @@
 @tailwind components;
 @tailwind utilities;
 
-html,
-body,
-#root {
-  height: 100%;
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+
+  html {
+    -webkit-tap-highlight-color: transparent;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-canvas font-sans text-neutral-900 antialiased;
+    font-feature-settings: "ss01";
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-display;
+    font-optical-sizing: auto;
+    letter-spacing: -0.015em;
+  }
+
+  ::selection {
+    background: rgb(var(--c-brand-300) / 0.55);
+    color: rgb(var(--c-neutral-950));
+  }
+
+  /* Foco visible y consistente para teclado (no se ve al hacer clic con el ratón). */
+  :focus-visible {
+    outline: 2px solid rgb(var(--c-brand-500));
+    outline-offset: 2px;
+    border-radius: 0.5rem;
+  }
+
+  /* Barras de desplazamiento discretas. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(var(--c-neutral-300)) transparent;
+  }
 }
 
-body {
-  @apply bg-neutral-50 text-neutral-900 antialiased;
+@layer utilities {
+  /* Cifras tabulares: los números no "bailan" al cambiar de valor. */
+  .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+
+  /* Textura de paneles de invernadero (retícula fina), para fondos. */
+  .greenhouse-grid {
+    background-image:
+      linear-gradient(rgb(var(--c-brand-700) / 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgb(var(--c-brand-700) / 0.05) 1px, transparent 1px);
+    background-size: 56px 56px;
+  }
+
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      rgb(var(--c-neutral-100)) 0%,
+      rgb(var(--c-neutral-200)) 40%,
+      rgb(var(--c-neutral-100)) 80%
+    );
+    background-size: 200% 100%;
+    @apply animate-shimmer rounded-lg;
+  }
+}
+
+/* Pestaña oculta: se congelan las animaciones CSS para no gastar batería. */
+html.page-hidden *,
+html.page-hidden *::before,
+html.page-hidden *::after {
+  animation-play-state: paused !important;
+}
+
+/* Movimiento reducido: todas las animaciones decorativas quedan quietas.
+   Se aplica si el sistema lo pide (salvo que el usuario elija "Animaciones: Sí"
+   en el menú, clase motion-full) o si el usuario elige "Reducidas". */
+@media (prefers-reduced-motion: reduce) {
+  html:not(.motion-full) {
+    scroll-behavior: auto;
+  }
+  html:not(.motion-full) *,
+  html:not(.motion-full) *::before,
+  html:not(.motion-full) *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+html.motion-reduce {
+  scroll-behavior: auto;
+}
+html.motion-reduce *,
+html.motion-reduce *::before,
+html.motion-reduce *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
 }

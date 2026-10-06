@@ -1,139 +1,72 @@
+import { lazy, Suspense } from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
-import { LoginPage } from "./pages/LoginPage";
-import { RegisterPage } from "./pages/RegisterPage";
-import { ForgotPasswordPage } from "./pages/ForgotPasswordPage";
-import { ResetPasswordPage } from "./pages/ResetPasswordPage";
-import { GreenhousesPage } from "./pages/GreenhousesPage";
-import { GreenhouseDashboardPage } from "./pages/GreenhouseDashboardPage";
-import { SensorsPage } from "./pages/SensorsPage";
-import { SensorDetailPage } from "./pages/SensorDetailPage";
-import { ActuatorsPage } from "./pages/ActuatorsPage";
-import { ActuatorDetailPage } from "./pages/ActuatorDetailPage";
-import { ZonesPage } from "./pages/ZonesPage";
-import { DeviceDetailPage } from "./pages/DeviceDetailPage";
-import { DevicesPage } from "./pages/DevicesPage";
-import { MembershipsPage } from "./pages/MembershipsPage";
-import { ExportPage } from "./pages/ExportPage";
-import { AlertsPage } from "./pages/AlertsPage";
-import { CatalogPage } from "./pages/CatalogPage";
-import { NotFoundPage } from "./pages/NotFoundPage";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import { AppShell } from "./components/Layout";
+import { Toaster } from "./components/Toaster";
+import { usePauseWhenHidden } from "./lib/theme";
+
+// Cada página se descarga solo cuando se visita (code-splitting).
+const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) =>
+  lazy(() => load().then((m) => ({ default: m[name] })));
+
+const LoginPage = page(() => import("./pages/LoginPage"), "LoginPage");
+const RegisterPage = page(() => import("./pages/RegisterPage"), "RegisterPage");
+const ForgotPasswordPage = page(() => import("./pages/ForgotPasswordPage"), "ForgotPasswordPage");
+const ResetPasswordPage = page(() => import("./pages/ResetPasswordPage"), "ResetPasswordPage");
+const GreenhousesPage = page(() => import("./pages/GreenhousesPage"), "GreenhousesPage");
+const GreenhouseDashboardPage = page(() => import("./pages/GreenhouseDashboardPage"), "GreenhouseDashboardPage");
+const SensorsPage = page(() => import("./pages/SensorsPage"), "SensorsPage");
+const SensorDetailPage = page(() => import("./pages/SensorDetailPage"), "SensorDetailPage");
+const ActuatorsPage = page(() => import("./pages/ActuatorsPage"), "ActuatorsPage");
+const ActuatorDetailPage = page(() => import("./pages/ActuatorDetailPage"), "ActuatorDetailPage");
+const ZonesPage = page(() => import("./pages/ZonesPage"), "ZonesPage");
+const DeviceDetailPage = page(() => import("./pages/DeviceDetailPage"), "DeviceDetailPage");
+const DevicesPage = page(() => import("./pages/DevicesPage"), "DevicesPage");
+const MembershipsPage = page(() => import("./pages/MembershipsPage"), "MembershipsPage");
+const ExportPage = page(() => import("./pages/ExportPage"), "ExportPage");
+const AlertsPage = page(() => import("./pages/AlertsPage"), "AlertsPage");
+const CatalogPage = page(() => import("./pages/CatalogPage"), "CatalogPage");
+const NotFoundPage = page(() => import("./pages/NotFoundPage"), "NotFoundPage");
 
 export function App() {
+  usePauseWhenHidden();
   return (
-    <Routes>
-      <Route path="/" element={<Navigate to="/greenhouses" replace />} />
-      <Route
-        path="/catalog"
-        element={
-          <ProtectedRoute>
-            <CatalogPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/register" element={<RegisterPage />} />
-      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
-      <Route path="/reset-password" element={<ResetPasswordPage />} />
+    <>
+      <Suspense fallback={<div className="min-h-dvh bg-canvas" />}>
+        <Routes>
+          <Route path="/" element={<Navigate to="/greenhouses" replace />} />
+          <Route path="/login" element={<LoginPage />} />
+          <Route path="/register" element={<RegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
 
-      <Route
-        path="/greenhouses"
-        element={
-          <ProtectedRoute>
-            <GreenhousesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/greenhouses/:id"
-        element={
-          <ProtectedRoute>
-            <GreenhouseDashboardPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/greenhouses/:id/sensors"
-        element={
-          <ProtectedRoute>
-            <SensorsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/greenhouses/:id/sensors/:sensorId"
-        element={
-          <ProtectedRoute>
-            <SensorDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/greenhouses/:id/actuators"
-        element={
-          <ProtectedRoute>
-            <ActuatorsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/greenhouses/:id/actuators/:actuatorId"
-        element={
-          <ProtectedRoute>
-            <ActuatorDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/greenhouses/:id/alerts"
-        element={
-          <ProtectedRoute>
-            <AlertsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/greenhouses/:id/zones"
-        element={
-          <ProtectedRoute>
-            <ZonesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/greenhouses/:id/devices"
-        element={
-          <ProtectedRoute>
-            <DevicesPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/greenhouses/:id/devices/:deviceId"
-        element={
-          <ProtectedRoute>
-            <DeviceDetailPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/greenhouses/:id/members"
-        element={
-          <ProtectedRoute>
-            <MembershipsPage />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/greenhouses/:id/export"
-        element={
-          <ProtectedRoute>
-            <ExportPage />
-          </ProtectedRoute>
-        }
-      />
+          {/* Todo lo que requiere sesión comparte el mismo marco (menú + barra). */}
+          <Route
+            element={
+              <ProtectedRoute>
+                <AppShell />
+              </ProtectedRoute>
+            }
+          >
+            <Route path="/catalog" element={<CatalogPage />} />
+            <Route path="/greenhouses" element={<GreenhousesPage />} />
+            <Route path="/greenhouses/:id" element={<GreenhouseDashboardPage />} />
+            <Route path="/greenhouses/:id/sensors" element={<SensorsPage />} />
+            <Route path="/greenhouses/:id/sensors/:sensorId" element={<SensorDetailPage />} />
+            <Route path="/greenhouses/:id/actuators" element={<ActuatorsPage />} />
+            <Route path="/greenhouses/:id/actuators/:actuatorId" element={<ActuatorDetailPage />} />
+            <Route path="/greenhouses/:id/alerts" element={<AlertsPage />} />
+            <Route path="/greenhouses/:id/zones" element={<ZonesPage />} />
+            <Route path="/greenhouses/:id/devices" element={<DevicesPage />} />
+            <Route path="/greenhouses/:id/devices/:deviceId" element={<DeviceDetailPage />} />
+            <Route path="/greenhouses/:id/members" element={<MembershipsPage />} />
+            <Route path="/greenhouses/:id/export" element={<ExportPage />} />
+          </Route>
 
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
+          <Route path="*" element={<NotFoundPage />} />
+        </Routes>
+      </Suspense>
+      <Toaster />
+    </>
   );
 }

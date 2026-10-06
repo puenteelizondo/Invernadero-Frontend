@@ -65,12 +65,12 @@ export function MembershipsPage() {
             {memberships.map((m) => (
               <li key={m.id} className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-emerald-400 text-sm font-bold uppercase text-white shadow-sm">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand-700 font-display text-sm font-semibold text-white dark:bg-brand-500 dark:text-neutral-50 uppercase shadow-sm">
                     {m.username[0]}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-neutral-900">{m.username}</p>
-                    <p className="text-xs text-neutral-400">Desde {new Date(m.created_at).toLocaleDateString()}</p>
+                    <p className="text-xs text-neutral-500">Desde {new Date(m.created_at).toLocaleDateString()}</p>
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
@@ -90,7 +90,7 @@ export function MembershipsPage() {
                   <RoleBadge role={m.role} />
                   <button
                     onClick={() => setToRemove(m.id)}
-                    className="rounded-lg p-2.5 text-neutral-400 hover:bg-red-50 hover:text-red-600"
+                    className="rounded-lg p-2.5 text-neutral-500 hover:bg-red-50 hover:text-red-600"
                     title="Quitar acceso"
                   >
                     <Trash2 className="h-4 w-4" />

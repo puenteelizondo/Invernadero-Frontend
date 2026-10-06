@@ -1,60 +1,25 @@
 import { useState } from "react";
 import type { ButtonHTMLAttributes, ComponentType, InputHTMLAttributes, ReactNode } from "react";
-import { Droplets, Eye, EyeOff, Leaf, Loader2, Sprout, Sun, Thermometer, Wind } from "lucide-react";
+import { motion } from "framer-motion";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { GreenhouseScene, phaseLabel, useLocalHour } from "./GreenhouseScene";
+import { BrandMark } from "./BrandMark";
+import { ThemeToggle } from "./ThemeToggle";
+import { EASE_LEAF, useCalm } from "../lib/motion";
 
 /**
- * Marco compartido de las pantallas de acceso (login, registro,
- * recuperar/restablecer contraseña): a la izquierda un "invernadero"
- * decorativo con hojas flotando y tarjetas de sensores de adorno, a la
- * derecha el formulario en una tarjeta de cristal. En pantallas
- * chicas la parte decorativa se oculta y solo queda el formulario
- * sobre el fondo verde.
+ * Marco de las pantallas de acceso (login, registro, recuperar y
+ * restablecer contraseña). A un lado, el invernadero ilustrado con el
+ * cielo de la hora real de este dispositivo; al otro, el formulario.
+ * En celular la escena queda como franja superior.
  *
- * Todo lo del lado izquierdo es puramente decorativo (aria-hidden): no
- * muestra datos reales de ningún sensor.
+ * La escena es decorativa (aria-hidden): no muestra datos de sensores.
  */
 
-const LEAVES = [
-  { left: "8%", top: "12%", size: 28, delay: "0s", opacity: 0.35 },
-  { left: "78%", top: "8%", size: 20, delay: "1.5s", opacity: 0.3 },
-  { left: "62%", top: "28%", size: 34, delay: "3s", opacity: 0.25 },
-  { left: "20%", top: "44%", size: 22, delay: "2s", opacity: 0.3 },
-  { left: "85%", top: "52%", size: 26, delay: "4s", opacity: 0.28 },
-  { left: "40%", top: "70%", size: 30, delay: "1s", opacity: 0.25 },
-  { left: "10%", top: "82%", size: 24, delay: "5s", opacity: 0.3 },
-  { left: "72%", top: "86%", size: 18, delay: "2.5s", opacity: 0.3 },
-];
-
-const CHIPS = [
-  { icon: Thermometer, label: "Temperatura", value: "24.6 °C", color: "#ef4444", fill: 62 },
-  { icon: Droplets, label: "Humedad", value: "71 %", color: "#0ea5e9", fill: 71 },
-  { icon: Sun, label: "Luz", value: "18 400 lx", color: "#f59e0b", fill: 48 },
-  { icon: Wind, label: "Viento", value: "6 km/h", color: "#14b8a6", fill: 25 },
-];
-
-function DecorChip({ chip, delay }: { chip: (typeof CHIPS)[number]; delay: string }) {
-  const Icon = chip.icon;
-  return (
-    <div
-      className="flex items-center gap-3 rounded-2xl border border-white/25 bg-white/15 px-3.5 py-2.5 shadow-lg backdrop-blur-md animate-rise"
-      style={{ animationDelay: delay }}
-    >
-      <span
-        className="relative flex h-10 w-10 shrink-0 items-end justify-center overflow-hidden rounded-full bg-white/30"
-        aria-hidden
-      >
-        <span
-          className="absolute inset-x-0 bottom-0 transition-all"
-          style={{ height: `${chip.fill}%`, background: `${chip.color}cc` }}
-        />
-        <Icon className="relative mb-2.5 h-5 w-5 text-white drop-shadow" />
-      </span>
-      <div className="leading-tight">
-        <p className="text-[11px] uppercase tracking-wide text-white/70">{chip.label}</p>
-        <p className="text-sm font-semibold text-white">{chip.value}</p>
-      </div>
-    </div>
-  );
+function greeting(h: number) {
+  if (h >= 5 && h < 12) return "Buenos días";
+  if (h >= 12 && h < 19) return "Buenas tardes";
+  return "Buenas noches";
 }
 
 export function AuthShell({
@@ -68,91 +33,66 @@ export function AuthShell({
   children: ReactNode;
   footer?: ReactNode;
 }) {
+  const hour = useLocalHour();
+  const calm = useCalm();
+  const night = phaseLabel(hour) === "Noche";
+  const item = (i: number) =>
+    calm
+      ? {}
+      : {
+          initial: { opacity: 0, y: 14 },
+          animate: { opacity: 1, y: 0 },
+          transition: { duration: 0.55, delay: 0.12 + i * 0.08, ease: EASE_LEAF },
+        };
+
   return (
-    <div className="relative flex min-h-screen overflow-hidden bg-gradient-to-br from-brand-800 via-brand-700 to-emerald-600">
-      {/* Rombos de "vidrio de invernadero" */}
-      <div
-        aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-[0.07]"
-        style={{
-          backgroundImage:
-            "linear-gradient(135deg, #fff 25%, transparent 25%), linear-gradient(225deg, #fff 25%, transparent 25%), linear-gradient(45deg, #fff 25%, transparent 25%), linear-gradient(315deg, #fff 25%, transparent 25%)",
-          backgroundPosition: "40px 0, 40px 0, 0 0, 0 0",
-          backgroundSize: "80px 80px",
-        }}
-      />
-      {/* Halos de luz */}
-      <div aria-hidden className="pointer-events-none absolute -left-32 -top-32 h-96 w-96 rounded-full bg-emerald-300/30 blur-3xl" />
-      <div aria-hidden className="pointer-events-none absolute -bottom-40 right-0 h-[28rem] w-[28rem] rounded-full bg-lime-300/20 blur-3xl" />
-
-      {/* Lado decorativo */}
-      <div className="relative hidden flex-1 flex-col justify-between p-10 lg:flex xl:p-14" aria-hidden>
-        {LEAVES.map((l, i) => (
-          <Leaf
-            key={i}
-            className="absolute animate-float text-white"
-            style={{ left: l.left, top: l.top, width: l.size, height: l.size, opacity: l.opacity, animationDelay: l.delay }}
-          />
-        ))}
-        {/* Nube que cruza */}
-        <div className="pointer-events-none absolute left-0 top-24 h-8 w-40 animate-drift rounded-full bg-white/15 blur-md" />
-        <div className="pointer-events-none absolute left-0 top-64 h-6 w-28 animate-drift rounded-full bg-white/10 blur-md [animation-delay:-9s]" />
-
-        <div className="relative flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/20 shadow-lg backdrop-blur">
-            <Sprout className="h-6 w-6 animate-sway text-white" />
-          </span>
-          <span className="text-xl font-semibold tracking-tight text-white">Invernadero</span>
-        </div>
-
-        <div className="relative">
-          <h2 className="max-w-md text-4xl font-semibold leading-tight tracking-tight text-white xl:text-5xl">
-            Tu invernadero,
-            <span className="block bg-gradient-to-r from-lime-200 via-white to-emerald-200 bg-[length:200%_100%] bg-clip-text text-transparent animate-shimmer">
-              siempre a la vista.
-            </span>
-          </h2>
-          <p className="mt-4 max-w-sm text-base text-white/75">
-            Temperatura, humedad, riego y ventilación en tiempo real, con lo que tus controladores
-            mandan directo desde el campo.
-          </p>
-          <div className="mt-8 grid max-w-md grid-cols-2 gap-3">
-            {CHIPS.map((c, i) => (
-              <DecorChip key={c.label} chip={c} delay={`${0.15 * i + 0.2}s`} />
-            ))}
-          </div>
-        </div>
-
-        <p className="relative text-xs text-white/50">Monitoreo y control de invernaderos</p>
+    <div className="relative flex min-h-dvh flex-col bg-canvas lg:flex-row lg:p-4">
+      <div className="absolute right-4 top-4 z-20 lg:right-8 lg:top-8">
+        <ThemeToggle compact />
       </div>
+      {/* Escena */}
+      <GreenhouseScene
+        hour={hour}
+        humidity={night ? 70 : 45}
+        growLight={night}
+        className="h-[34dvh] min-h-[220px] shrink-0 rounded-b-[2rem] lg:h-auto lg:min-h-0 lg:flex-1 lg:rounded-[2rem]"
+      >
+        <div aria-hidden className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black/55 via-black/20 to-transparent" />
+        <div className="absolute left-5 top-5 lg:left-8 lg:top-8">
+          <BrandMark tone="light" />
+        </div>
+        <motion.div className="absolute inset-x-5 bottom-5 text-white lg:inset-x-10 lg:bottom-10" {...item(0)}>
+          <p className="font-display text-3xl font-semibold leading-none drop-shadow sm:text-4xl lg:text-6xl">
+            {greeting(hour)}.
+          </p>
+          <p className="mt-2 max-w-md text-sm text-white/85 drop-shadow lg:mt-4 lg:text-lg">
+            {night ? "Así va la noche afuera." : "Así va el día afuera."} Entra para ver cómo va adentro.
+          </p>
+        </motion.div>
+      </GreenhouseScene>
 
-      {/* Lado del formulario */}
-      <div className="relative flex w-full items-center justify-center px-4 py-10 lg:w-[30rem] lg:shrink-0 lg:px-10 xl:w-[34rem]">
-        <div className="w-full max-w-sm animate-rise">
-          <div className="mb-6 flex flex-col items-center gap-3 text-center lg:hidden">
-            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20 shadow-lg backdrop-blur">
-              <Sprout className="h-7 w-7 animate-sway text-white" />
-            </span>
-            <span className="text-lg font-semibold text-white">Invernadero</span>
-          </div>
-
-          <div className="rounded-3xl border border-white/40 bg-white/90 p-7 shadow-2xl shadow-brand-900/30 backdrop-blur-xl">
-            <div className="mb-6">
-              <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">{title}</h1>
-              {subtitle && <p className="mt-1 text-sm text-neutral-500">{subtitle}</p>}
-            </div>
-            {children}
-          </div>
-
-          {footer && <div className="mt-5 text-center text-sm text-white/85">{footer}</div>}
+      {/* Formulario */}
+      <div className="relative flex flex-1 items-start justify-center px-5 pb-10 pt-8 lg:w-[32rem] lg:flex-none lg:items-center lg:px-14 lg:py-10">
+        <div className="w-full max-w-sm">
+          <motion.div className="mb-7" {...item(1)}>
+            <h1 className="text-[2rem] font-semibold leading-tight text-neutral-900">{title}</h1>
+            {subtitle && <p className="mt-1.5 text-[0.95rem] text-neutral-600">{subtitle}</p>}
+          </motion.div>
+          <motion.div {...item(2)}>{children}</motion.div>
+          {footer && (
+            <motion.div className="mt-6 border-t border-neutral-200/80 pt-5 text-center text-sm text-neutral-600" {...item(3)}>
+              {footer}
+            </motion.div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-/** Enlace claro para el pie de AuthShell (que va sobre fondo verde oscuro). */
-export const authLinkClass = "font-medium text-white underline decoration-white/40 underline-offset-2 hover:decoration-white";
+/** Enlace del pie de AuthShell. */
+export const authLinkClass =
+  "font-semibold text-brand-700 underline decoration-brand-300 underline-offset-[3px] transition hover:decoration-brand-600";
 
 /** Campo con ícono a la izquierda (y botón de mostrar/ocultar si es contraseña). */
 export function AuthField({
@@ -168,26 +108,28 @@ export function AuthField({
   const isPassword = type === "password";
   return (
     <div className="mb-4">
-      <label className="mb-1.5 block text-sm font-medium text-neutral-700">{label}</label>
-      <div className="relative">
-        <Icon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-brand-600" />
-        <input
-          type={isPassword && show ? "text" : type}
-          className="w-full rounded-xl border border-neutral-200 bg-white/80 py-2.5 pl-10 pr-10 text-sm shadow-inner shadow-neutral-100 transition focus:border-brand-500 focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand-500/30"
-          {...rest}
-        />
-        {isPassword && (
-          <button
-            type="button"
-            onClick={() => setShow((s) => !s)}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-neutral-400 hover:text-neutral-700"
-            title={show ? "Ocultar" : "Mostrar"}
-            tabIndex={-1}
-          >
-            {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-          </button>
-        )}
-      </div>
+      <label className="group block">
+        <span className="mb-1.5 block text-sm font-medium text-neutral-700">{label}</span>
+        <span className="relative block">
+          <Icon className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-neutral-500 transition group-focus-within:text-brand-600" />
+          <input
+            type={isPassword && show ? "text" : type}
+            className="min-h-[48px] w-full rounded-2xl border border-neutral-200 bg-surface py-3 pl-10 pr-11 text-[0.95rem] text-neutral-900 transition placeholder:text-neutral-400 hover:border-brand-300 focus:border-brand-500 focus:outline-none focus:ring-4 focus:ring-brand-500/15"
+            {...rest}
+          />
+          {isPassword && (
+            <button
+              type="button"
+              onClick={() => setShow((v) => !v)}
+              className="absolute right-1.5 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-xl text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-800"
+              aria-label={show ? "Ocultar contraseña" : "Mostrar contraseña"}
+              aria-pressed={show}
+            >
+              {show ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+            </button>
+          )}
+        </span>
+      </label>
     </div>
   );
 }
@@ -202,9 +144,10 @@ export function AuthButton({
     <button
       {...rest}
       disabled={loading || rest.disabled}
-      className="mt-1 flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-brand-600 to-emerald-500 px-4 py-3 text-sm font-semibold text-white shadow-lg shadow-brand-600/30 transition hover:-translate-y-0.5 hover:from-brand-700 hover:to-emerald-600 hover:shadow-xl disabled:translate-y-0 disabled:opacity-60"
+      aria-busy={loading || undefined}
+      className="mt-2 flex min-h-[50px] w-full items-center justify-center gap-2 rounded-2xl bg-brand-700 px-4 py-3 text-[0.95rem] font-semibold text-white shadow-[inset_0_1px_0_rgb(255_255_255/0.15),0_10px_24px_-12px_rgb(var(--c-brand-900)/0.8)] transition duration-150 hover:bg-brand-800 active:scale-[0.98] disabled:opacity-60 dark:bg-brand-500 dark:text-neutral-50 dark:hover:bg-brand-400"
     >
-      {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+      {loading && <Loader2 className="h-4 w-4 animate-spin" aria-hidden />}
       {children}
     </button>
   );

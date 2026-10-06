@@ -1,9 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { MapPin, Plus, Sprout } from "lucide-react";
 import { useCreateGreenhouse, useGreenhouses } from "../hooks/useGreenhouses";
 import { formatApiError } from "../lib/api";
-import { Button, Card, EmptyState, ErrorText, Input, Label, Modal, PageHeader, Spinner } from "../components/ui";
+import { Button, EmptyState, ErrorText, Input, Label, Modal, PageHeader, Skeleton } from "../components/ui";
+import { GreenhouseScene, formatHour, phaseLabel, useLocalHour } from "../components/GreenhouseScene";
+import type { Greenhouse } from "../types";
 import { Layout } from "../components/Layout";
 
 export function GreenhousesPage() {
@@ -43,48 +45,17 @@ export function GreenhousesPage() {
       />
 
       {isLoading ? (
-        <Spinner />
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((i) => (
+            <Skeleton key={i} className="h-56 rounded-[1.25rem]" />
+          ))}
+        </div>
       ) : !greenhouses?.length ? (
         <EmptyState title="Todavía no tienes invernaderos" hint="Crea el primero para empezar." />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {greenhouses.map((g) => (
-            <button key={g.id} onClick={() => navigate(`/greenhouses/${g.id}`)} className="group text-left">
-              <div className="h-full overflow-hidden rounded-2xl border border-brand-100 bg-white shadow-sm shadow-brand-900/5 transition duration-200 group-hover:-translate-y-1 group-hover:border-brand-300 group-hover:shadow-lg group-hover:shadow-brand-600/15">
-                <div className="relative flex h-20 items-end bg-gradient-to-br from-brand-600 via-brand-500 to-emerald-400 px-4 pb-3">
-                  <div
-                    aria-hidden
-                    className="pointer-events-none absolute inset-0 opacity-[0.12]"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(135deg, #fff 25%, transparent 25%), linear-gradient(225deg, #fff 25%, transparent 25%), linear-gradient(45deg, #fff 25%, transparent 25%), linear-gradient(315deg, #fff 25%, transparent 25%)",
-                      backgroundPosition: "20px 0, 20px 0, 0 0, 0 0",
-                      backgroundSize: "40px 40px",
-                    }}
-                  />
-                  <span className="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-xl bg-white/25 backdrop-blur">
-                    <Sprout className="h-5 w-5 animate-sway text-white" />
-                  </span>
-                  <h3 className="relative truncate text-lg font-semibold text-white drop-shadow">{g.name}</h3>
-                </div>
-                <div className="p-4">
-                  <p className="line-clamp-2 min-h-[2.5rem] text-sm text-neutral-500">{g.description || "Sin descripción."}</p>
-                  <div className="mt-3 flex items-center justify-between text-xs">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 font-medium text-brand-700">
-                      <MapPin className="h-3 w-3" /> {g.zones.length} zona{g.zones.length === 1 ? "" : "s"}
-                    </span>
-                    <span
-                      className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ${
-                        g.is_active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-500"
-                      }`}
-                    >
-                      <span className={`h-1.5 w-1.5 rounded-full ${g.is_active ? "bg-emerald-500" : "bg-neutral-400"}`} />
-                      {g.is_active ? "Activo" : "Inactivo"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </button>
+            <GreenhouseCard key={g.id} greenhouse={g} />
           ))}
         </div>
       )}
@@ -100,7 +71,7 @@ export function GreenhousesPage() {
             <Input value={description} onChange={(e) => setDescription(e.target.value)} />
           </div>
           <ErrorText>{create.isError ? formatApiError(create.error) : null}</ErrorText>
-          <div className="mt-5 flex justify-end gap-2 border-t border-brand-50 pt-4">
+          <div className="mt-5 flex justify-end gap-2 border-t border-neutral-200/70 pt-4">
             <Button type="button" variant="secondary" onClick={() => setOpen(false)}>
               Cancelar
             </Button>
@@ -111,5 +82,39 @@ export function GreenhousesPage() {
         </form>
       </Modal>
     </Layout>
+  );
+}
+
+/** Tarjeta de un invernadero con su cielo a la hora local de su zona horaria. */
+function GreenhouseCard({ greenhouse: g }: { greenhouse: Greenhouse }) {
+  const hour = useLocalHour(g.timezone);
+  return (
+    <Link
+      to={`/greenhouses/${g.id}`}
+      className="group block overflow-hidden rounded-[1.25rem] border border-neutral-200/80 bg-surface shadow-pane transition duration-200 ease-leaf hover:-translate-y-1 hover:border-brand-300 hover:shadow-lift"
+    >
+      <GreenhouseScene hour={hour} humidity={40} className="h-32">
+        <span className="num absolute left-3 top-3 rounded-full bg-surface/85 px-2.5 py-1 text-xs font-semibold text-neutral-800 backdrop-blur">
+          {formatHour(hour)} <span className="font-normal text-neutral-600">{phaseLabel(hour).toLowerCase()}</span>
+        </span>
+      </GreenhouseScene>
+      <div className="p-4">
+        <h3 className="truncate text-lg font-semibold text-neutral-900 group-hover:text-brand-800">{g.name}</h3>
+        <p className="mt-0.5 line-clamp-2 min-h-[2.5rem] text-sm text-neutral-600">{g.description || "Sin descripción."}</p>
+        <div className="mt-3 flex items-center justify-between text-xs">
+          <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 font-medium text-brand-700">
+            <MapPin className="h-3 w-3" /> {g.zones.length} zona{g.zones.length === 1 ? "" : "s"}
+          </span>
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 font-medium ${
+              g.is_active ? "bg-emerald-100 text-emerald-700" : "bg-neutral-100 text-neutral-600"
+            }`}
+          >
+            <span className={`h-1.5 w-1.5 rounded-full ${g.is_active ? "bg-emerald-500" : "bg-neutral-400"}`} />
+            {g.is_active ? "Activo" : "Inactivo"}
+          </span>
+        </div>
+      </div>
+    </Link>
   );
 }

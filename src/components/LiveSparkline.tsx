@@ -17,9 +17,9 @@ interface DotProps {
 function PersistenceDot({ cx, cy, payload, color }: DotProps & { color: string }) {
   if (cx == null || cy == null || !payload) return null;
   return payload.persisted ? (
-    <circle cx={cx} cy={cy} r={2.5} fill={color} stroke="white" strokeWidth={1} />
+    <circle cx={cx} cy={cy} r={2.5} fill={color} stroke="rgb(var(--c-surface))" strokeWidth={1} />
   ) : (
-    <circle cx={cx} cy={cy} r={2.5} fill="white" stroke={color} strokeWidth={1.5} />
+    <circle cx={cx} cy={cy} r={2.5} fill="rgb(var(--c-surface))" stroke={color} strokeWidth={1.5} />
   );
 }
 
@@ -40,7 +40,8 @@ export function LiveSparkline({
 }) {
   if (points.length < 2) {
     return (
-      <div className="flex h-14 items-center justify-center text-xs text-neutral-400">
+      <div className="flex h-14 items-center justify-center gap-2 rounded-xl border border-dashed border-neutral-200 text-xs text-neutral-500">
+        <span className="h-1.5 w-1.5 animate-ping1 rounded-full bg-brand-500" aria-hidden />
         Esperando lecturas en vivo…
       </div>
     );
@@ -67,7 +68,8 @@ export function LiveSparkline({
               "Valor",
             ]}
             labelFormatter={(t) => new Date(t as number).toLocaleTimeString()}
-            contentStyle={{ fontSize: 12, borderRadius: 8 }}
+            contentStyle={{ fontSize: 12, borderRadius: 12, background: "rgb(var(--c-surface))", border: "1px solid rgb(var(--c-neutral-200))", color: "rgb(var(--c-neutral-900))", boxShadow: "0 12px 24px -12px rgb(0 0 0 / 0.35)" }}
+            cursor={{ stroke: "rgb(var(--c-neutral-300))", strokeDasharray: "3 3" }}
           />
           <Area
             type="monotone"

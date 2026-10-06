@@ -90,12 +90,12 @@ Content-Type: application/json
       </div>
 
       {/* ID grande */}
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-4">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-brand-200 bg-brand-50/60 p-4">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-brand-700">ID del sensor (sensor_id)</p>
           <p className="font-mono text-4xl font-bold text-brand-900">{sensor.id}</p>
         </div>
-        <CopyButton text={String(sensor.id)} label="Copiar ID" className="border border-brand-200 bg-white" />
+        <CopyButton text={String(sensor.id)} label="Copiar ID" className="border border-brand-200 bg-surface" />
       </div>
 
       {/* Avisos que evitan el "no me llega nada" */}

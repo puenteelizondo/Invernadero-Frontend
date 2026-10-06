@@ -4,15 +4,12 @@ Panel web para administrar invernaderos, sensores, actuadores y accesos, consumi
 
 ## Qué hace (y qué NO hace) este frontend
 
-- Crea invernaderos, sensores, actuadores, zonas y dispositivos (con rotación de `api_key`), y gestiona membresías (invitar por username/email, cambiar rol, quitar acceso).
+- Crea invernaderos, sensores, actuadores y gestiona membresías (invitar por username/email, cambiar rol, quitar acceso).
 - Muestra lecturas de sensores y estado de actuadores **en vivo** vía WebSocket, con historial y gráfica para cada sensor.
-- **Alertas:** reglas por sensor (umbral alto/bajo con duración, o aviso de "sin señal"), alertas activas con aviso en el panel, historial paginado, reconocer alertas y limpiar las ya resueltas (solo propietarios).
-- **Catálogo de tipos** con dos alcances: globales (los administra staff) y propios de cada invernadero (los administra su propietario). El enlace del menú solo aparece cuando ya hay un invernadero.
 - Enciende/apaga actuadores a mano.
 - Exporta un invernadero a Excel.
-- A propósito, **nunca** manda una lectura de sensor manualmente. Ese dato lo generan los controladores físicos (Arduino/ESP32/Raspberry Pi, etc.) llamando al endpoint de ingesta del backend con su propia `X-Device-Key`. Este frontend es de solo-lectura para lecturas: verlas, graficarlas, exportarlas — nunca escribirlas.
-- Para sensores/actuadores nuevos, ofrece una lista de **tipos predesignados** (con ícono y unidad/rango sugeridos) que hacen match con el catálogo real del backend por su `code`.
-- **Responsivo:** se adapta a celular, tablet y escritorio (ver la sección "Diseño adaptable").
+- A propósito, **nunca** manda una lectura de sensor manualmente. Ese dato lo generan los controladores físicos (Arduino/ESP32/Raspberry Pi, etc.) llamando a `POST /api/v1/readings/` con su propia `X-Device-Key`. Este frontend es de solo-lectura para lecturas: verlas, graficarlas, exportarlas — nunca escribirlas.
+- Para sensores/actuadores nuevos, ofrece una lista de **tipos predesignados** (con ícono y unidad/rango sugeridos) que hacen match con el catálogo real (`SensorType`/`ActuatorType`) del backend por su `code`. Un usuario normal solo puede elegir entre tipos que ya existen en ese catálogo; un usuario `staff` además puede sembrar tipos nuevos con un clic usando esos valores sugeridos (el backend exige `IsAdminUser` para crear tipos — ver `apps/sensors/views.py` y `apps/actuators/views.py` en el backend).
 
 ## Stack
 
@@ -22,7 +19,9 @@ Panel web para administrar invernaderos, sensores, actuadores y accesos, consumi
 - react-router-dom v6
 - recharts (gráficas de sensores)
 - lucide-react (íconos, incluidos los de los "sensores predesignados")
-- Tailwind CSS v3
+- Tailwind CSS v3 (con tokens por variables CSS: tema claro y oscuro)
+- framer-motion (resortes, transiciones de página, modales y listas animadas)
+- Fuentes alojadas localmente con `@fontsource`: Bricolage Grotesque (títulos) e IBM Plex Sans (interfaz y datos). No dependen de internet.
 
 ## Cómo se conecta con el backend (importante)
 
@@ -52,7 +51,7 @@ Así, desde el punto de vista del navegador, todo vive en `http://localhost:5173
 
 1. Pide un token corto de un solo uso: `POST /api/v1/realtime/ws-token/` con `{ greenhouse: <id> }` (requiere sesión y ser miembro del invernadero).
 2. Abre `ws://.../ws/greenhouses/<id>/?token=...` (vía el proxy de Vite).
-3. Recibe un evento `snapshot` inicial y después `sensor_reading` / `actuator_state_changed` / `alert_opened` / `alert_resolved` / `alert_acknowledged` en vivo, que actualizan la UI y invalidan las queries de historial correspondientes.
+3. Recibe un evento `snapshot` inicial y después `sensor_reading` / `actuator_state_changed` en vivo, que actualizan la UI y invalidan las queries de historial correspondientes.
 4. Si el socket se cae, reconecta solo con backoff exponencial (pidiendo un token nuevo cada vez, porque el anterior ya expiró).
 
 ## Estructura
@@ -67,28 +66,22 @@ src/
     actuatorPresets.ts      Catálogo de actuadores predesignados
   hooks/
     useAuth.ts            Login/logout/registro/recuperación + sesión actual
-    useGreenhouses.ts      CRUD contra la API (invernaderos, sensores, actuadores, zonas, dispositivos, membresías, export)
-    useAlerts.ts           Reglas de alerta, alertas activas/historial, reconocer y limpiar
+    useGreenhouses.ts      Todo el CRUD contra la API (invernaderos, sensores, actuadores, membresías, export)
     useRealtime.ts         WebSocket por invernadero
-  components/              Layout, Sidebar, badges, primitivas de UI (Button, Card, Modal...)
+  components/              Layout/AppShell, Sidebar, badges, primitivas de UI (Button, Card, Modal...)
+    GreenhouseScene.tsx    Escena SVG del invernadero (cielo según la hora, condensación, luces, ventilador, riego)
+    ZonePlan.tsx           Plano de zonas visto desde arriba
+    Illustrations.tsx      Ilustraciones de estados vacíos ("brote", "planta sana")
+    Toaster.tsx            Avisos breves: toast("Copiado")
+    AnimatedNumber.tsx     Número que rueda al cambiar de valor
+  lib/theme.ts             Tema claro / oscuro / sistema
+  lib/motion.ts            Curvas y duraciones únicas de toda la app
   pages/                   Una página por ruta
 ```
 
-## Diseño adaptable
-
-Breakpoints de Tailwind: celular (< 640 px), tablet (640–1023 px) y escritorio (≥ 1024 px, `lg`).
-
-- **Menú:** en escritorio es una columna fija a la izquierda. En celular y tablet se convierte en un cajón que se abre con el botón de la barra superior (que queda fija) y se cierra al elegir una opción, al tocar fuera o con Escape (`Layout.tsx` + `Sidebar.tsx`).
-- **Ventanas emergentes (`Modal` en `components/ui.tsx`):** en celular salen desde abajo como una hoja y hacen scroll interno; en pantallas grandes se centran.
-- **Listas y tarjetas:** las acciones se reacomodan en varias líneas en vez de desbordarse; los textos largos y códigos se truncan o se parten.
-- **Táctil:** botones e íconos de acción con área de toque cómoda (≥ 40 px).
-- Se usa `dvh` para que la barra del navegador móvil no tape contenido.
-
-Al agregar páginas nuevas, revisa que no haya scroll horizontal a 375 px de ancho (en Chrome: `F12` → `Ctrl+Shift+M`).
-
 ## Cómo correrlo
 
-Requiere que el backend (`Invernadero-Backend`) esté corriendo en `http://localhost:8000` (por ejemplo con `docker compose up -d`).
+Requiere que el backend (`Invernadero-Backend`) esté corriendo en `http://localhost:8000` (por ejemplo con `docker compose up`).
 
 ```bash
 npm install
@@ -102,49 +95,52 @@ npm run build   # genera dist/
 npm run preview # sirve dist/ localmente para probarlo
 ```
 
-### Abrirlo desde otro equipo de la red (celular, tablet)
+## Sistema de diseño ("invernadero vivo")
 
-1. Averigua la IP de tu PC (`ipconfig` en Windows, la IPv4 del Wi-Fi), por ejemplo `192.168.100.55`.
-2. En el `.env` del **backend**, agrega esa IP a:
-   ```
-   DJANGO_ALLOWED_HOSTS=localhost,127.0.0.1,192.168.100.55
-   CORS_ALLOWED_ORIGINS=http://localhost:5173,http://192.168.100.55:5173
-   CSRF_TRUSTED_ORIGINS=http://localhost:5173,http://192.168.100.55:5173
-   ```
-   y reinicia con `docker compose up -d`.
-3. Arranca el frontend exponiéndolo a la red:
-   ```bash
-   npm run dev -- --host
-   ```
-4. En Windows, permite los puertos 5173 y 8000 en el firewall para redes privadas.
-5. Desde el celular (mismo Wi-Fi) abre `http://192.168.100.55:5173`.
+**Colores.** Todo sale de `tailwind.config.js`. Las paletas se resuelven a variables CSS, así que las mismas clases (`bg-brand-50`, `text-neutral-600`, `bg-emerald-100`...) funcionan en los dos temas:
 
-Es HTTP sin cifrar: úsalo solo en una red de confianza. Si la IP de tu PC cambia, actualiza el `.env`.
-
-## Con Docker (correrlo donde sea)
-
-El frontend se empaqueta en una imagen de nginx: compila la app y la sirve, y reenvía `/api` y `/ws` al backend. Para el navegador todo sigue siendo un solo origen, igual que con el proxy de Vite, así que las cookies y el CSRF funcionan sin CORS.
-
-```bash
-docker compose up -d --build
-```
-
-Abre `http://localhost:8080` (o `http://<IP-de-la-PC>:8080` desde otro equipo). Variables opcionales, en un `.env` junto al `docker-compose.yml`:
-
-| Variable | Por defecto | Para qué |
+| Token | Claro | Uso |
 |---|---|---|
-| `FRONTEND_PORT` | `8080` | Puerto donde se publica el frontend |
-| `BACKEND_URL` | `http://host.docker.internal:8000` | Dónde está el backend. Si está en otra máquina: `http://192.168.100.20:8000` |
+| `brand` (clorofila) | `#1F5E3B` en 700 | Botones, navegación, acentos |
+| `neutral` (vidrio) | grises teñidos de verde | Texto y bordes |
+| `canvas` / `surface` | `#E9F0E7` / `#FBFCF9` | Fondo de página / tarjetas |
+| `amber`, `sky`, `red`... | Tailwind | Luz, agua, alertas |
 
-Notas:
-- nginx reenvía el `Host` original, así que en el `.env` del **backend** solo hace falta agregar el host o IP desde donde se abre el frontend en `DJANGO_ALLOWED_HOSTS` (no hace falta tocar `CSRF_TRUSTED_ORIGINS`).
-- Si el frontend y el backend están en el mismo `docker-compose`, pon `BACKEND_URL=http://web:8000`.
-- Para HTTPS, pon un proxy con certificado delante (Caddy, Traefik, nginx del servidor, Cloudflare Tunnel) y el backend deberá confiar en `X-Forwarded-Proto` (`SECURE_PROXY_SSL_HEADER`).
-- Cambiar `BACKEND_URL` no requiere recompilar: basta `docker compose up -d`.
+En oscuro ("noche de cultivo") las variables cambian solas: los extremos de cada escala se invierten. Para agregar un color nuevo, súmalo a `STANDARD` (o define su escala clara/oscura) en `tailwind.config.js`.
+
+**Tema.** Día / Noche / Sistema desde el menú (o el botón de sol/luna en celular y login). Se guarda en `localStorage` y un script de `index.html` lo aplica antes de pintar para que no parpadee.
+
+**Tipografía.** Títulos `h1–h3` usan `font-display` (Bricolage Grotesque); el resto IBM Plex Sans. Para números que cambian en vivo usa la clase `num` (cifras tabulares).
+
+**Movimiento.** Curvas y duraciones en `src/lib/motion.ts` (`spring`, `EASE_LEAF`, `pageVariants`). Reglas:
+
+- El movimiento continuo solo está en la escena del invernadero, el login y los medidores en vivo. El resto se mueve cuando el usuario hace algo (abrir, cambiar de página, confirmar).
+- **Control "Animaciones" en el menú:** *Sistema* respeta la preferencia de movimiento reducido del sistema operativo (en Windows: Configuración → Accesibilidad → Efectos visuales → Efectos de animación). *Sí* anima siempre. *Quietas* no anima nunca. Se guarda en el navegador (`localStorage`, clave `motion`).
+- Con movimiento reducido, todas las animaciones CSS se detienen (`index.css`) y los componentes de framer-motion usan `useCalm()` para aparecer sin desplazamiento.
+- **Pestaña oculta:** las animaciones CSS se pausan (`usePauseWhenHidden` en `lib/theme.ts`) para no gastar batería.
+
+**La escena del invernadero** (`GreenhouseScene`) solo refleja datos reales: la hora local del invernadero (su `timezone`), la humedad del primer sensor de humedad y el estado real de los actuadores:
+
+| Tipo (código) | En la escena |
+|---|---|
+| Ventilador (`fan`) | Gira el ventilador del frontón |
+| Iluminación (`light`) | Luz de cultivo violeta |
+| Bomba de agua / válvula (`water_pump`, `valve`) | Gotas desde la tubería de riego |
+| Nebulizador (`mister`) | Neblina entre las plantas |
+| Calefactor (`heater`) | Resplandor cálido y ondas de calor |
+| Enfriador (`cooler`) | Tinte frío y corrientes de aire |
+| Cortina / malla (`curtain`) | La malla de sombra baja sobre el techo |
+| Cualquier actuador | Un foco en el tablero de control (verde = encendido) |
+
+El tipo se reconoce por su código o por palabras de su nombre (ver `findActuatorPreset` en `lib/actuatorPresets.ts`). En el login es decorativa y usa la hora del dispositivo.
+
+**Cómo añadir un tipo de medidor.**
+1. Agrega el preset en `src/lib/sensorPresets.ts` (código, nombre, unidad, rango, ícono, color `hex`).
+2. Agrega su código a `SensorKind` y su dibujo en `SensorArt.tsx`, en un `viewBox` de 64×64. Usa `pct` (0..1) para llenar o mover.
+3. Si no lo dibujas, se usa el medidor genérico automáticamente.
+
+**Accesibilidad.** Foco visible en todo, modales con foco atrapado y cierre con Escape, interruptores con `role="switch"`, enlace "Saltar al contenido", contraste AA en los dos temas, y los estados nunca dependen solo del color (llevan texto o ícono).
 
 ## Pendientes / ideas para seguir
 
-- Code-splitting (el bundle actual pasa los 500 kB; recharts y react-router pueden ir en chunks separados).
 - Paginación real en `/readings/` (cursor) para historiales muy largos — hoy se pide la primera página.
-- Notificaciones toast en vez de solo texto de error inline.
-- Tema oscuro.

@@ -6,7 +6,6 @@ import { formatApiError } from "../lib/api";
 import { Layout } from "../components/Layout";
 import {
   Button,
-  Card,
   ConfirmDialog,
   EmptyState,
   ErrorText,
@@ -14,8 +13,9 @@ import {
   Label,
   Modal,
   PageHeader,
-  Spinner,
+  Skeleton,
 } from "../components/ui";
+import { ZonePlan } from "../components/ZonePlan";
 
 /**
  * Zonas de un invernadero (ej. "Mesa 1", "Túnel norte"). Son opcionales
@@ -79,41 +79,16 @@ export function ZonesPage() {
       />
 
       {isLoading ? (
-        <Spinner />
+        <Skeleton className="h-80 rounded-[1.75rem]" />
       ) : !zones?.length ? (
         <EmptyState title="Todavía no hay zonas" hint="Son opcionales -- puedes seguir creando sensores y actuadores sin asignarles una zona." />
       ) : (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {zones.map((z) => (
-            <Card key={z.id} className="relative bg-gradient-to-br from-white to-brand-50/40">
-              <div className="absolute right-3 top-3 flex gap-1">
-                <button
-                  onClick={() => openEdit(z.id, z.name, z.description)}
-                  className="rounded-lg p-2 text-neutral-400 sm:p-1 hover:bg-brand-50 hover:text-brand-700"
-                  title="Editar"
-                >
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => setToDelete(z.id)}
-                  className="rounded-lg p-2 text-neutral-400 sm:p-1 hover:bg-red-50 hover:text-red-600"
-                  title="Eliminar"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-              <div className="flex items-center gap-2.5 pr-12">
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-100">
-                  <MapPin className="h-4.5 w-4.5 text-brand-700" />
-                </span>
-                <div className="min-w-0">
-                  <p className="truncate font-semibold text-neutral-900">{z.name}</p>
-                  {z.description && <p className="truncate text-xs text-neutral-500">{z.description}</p>}
-                </div>
-              </div>
-            </Card>
-          ))}
-        </div>
+        <ZonePlan
+          greenhouseId={greenhouseId}
+          zones={zones}
+          onEdit={(z) => openEdit(z.id, z.name, z.description)}
+          onDelete={(zoneId) => setToDelete(zoneId)}
+        />
       )}
 
       <Modal open={open} onClose={() => setOpen(false)} title={editingId != null ? "Editar zona" : "Agregar zona"} icon={MapPin}>

@@ -136,7 +136,7 @@ void loop() {
 
       <Card
         className={`mb-6 ${
-          status === "online" ? "border-emerald-200 bg-gradient-to-br from-white to-emerald-50" : "bg-gradient-to-br from-white to-neutral-50"
+          status === "online" ? "border-emerald-200 bg-surface" : "bg-surface"
         }`}
       >
         <div className="flex flex-wrap items-center justify-between gap-5">
@@ -156,7 +156,7 @@ void loop() {
                   ? `Última lectura ${timeAgo(device.last_seen_at)} (${new Date(device.last_seen_at).toLocaleString()})`
                   : "Todavía no ha mandado ninguna lectura."}
               </p>
-              <p className="mt-0.5 text-xs text-neutral-400">
+              <p className="mt-0.5 text-xs text-neutral-500">
                 "En línea" = mandó datos en los últimos 5 minutos. Creado el {new Date(device.created_at).toLocaleDateString()}.
               </p>
             </div>
@@ -193,7 +193,7 @@ void loop() {
 
       <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <Card>
-          <h2 className="mb-3 flex items-center gap-2 font-medium text-neutral-900">
+          <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-neutral-900">
             <Cpu className="h-4 w-4" /> Sensores de este dispositivo
           </h2>
           {!mySensors.length ? (
@@ -206,7 +206,7 @@ void loop() {
                 <li key={s.id} className="flex items-center justify-between py-2 text-sm">
                   <Link to={`/greenhouses/${greenhouseId}/sensors/${s.id}`} className="text-neutral-800 hover:text-brand-700">
                     {s.name}
-                    <span className="ml-2 text-xs text-neutral-400">{s.sensor_type_name}</span>
+                    <span className="ml-2 text-xs text-neutral-500">{s.sensor_type_name}</span>
                   </Link>
                   <span className="inline-flex max-w-full items-center rounded-md bg-brand-50 pl-1.5 font-mono text-[11px] font-medium text-brand-700">
                     sensor_id {s.id}
@@ -218,7 +218,7 @@ void loop() {
           )}
         </Card>
         <Card>
-          <h2 className="mb-3 flex items-center gap-2 font-medium text-neutral-900">
+          <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-neutral-900">
             <ToggleLeft className="h-4 w-4" /> Actuadores de este dispositivo
           </h2>
           {!myActuators.length ? (
@@ -229,7 +229,7 @@ void loop() {
                 <li key={a.id} className="flex items-center justify-between py-2 text-sm">
                   <Link to={`/greenhouses/${greenhouseId}/actuators/${a.id}`} className="text-neutral-800 hover:text-brand-700">
                     {a.name}
-                    <span className="ml-2 text-xs text-neutral-400">{a.actuator_type_name}</span>
+                    <span className="ml-2 text-xs text-neutral-500">{a.actuator_type_name}</span>
                   </Link>
                   <span className="inline-flex max-w-full items-center rounded-md bg-brand-50 pl-1.5 font-mono text-[11px] font-medium text-brand-700">
                     actuator_id {a.id}
@@ -254,14 +254,14 @@ void loop() {
         </div>
 
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="flex items-center justify-between rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-4">
+          <div className="flex items-center justify-between rounded-2xl border border-brand-200 bg-brand-50/60 p-4">
             <div>
               <p className="text-xs font-medium uppercase tracking-wide text-brand-700">ID del dispositivo</p>
               <p className="font-mono text-3xl font-bold text-brand-900">{device.id}</p>
             </div>
-            <CopyButton text={String(device.id)} label="Copiar" className="border border-brand-200 bg-white" />
+            <CopyButton text={String(device.id)} label="Copiar" className="border border-brand-200 bg-surface" />
           </div>
-          <div className="flex items-center justify-between rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-4">
+          <div className="flex items-center justify-between rounded-2xl border border-brand-200 bg-brand-50/60 p-4">
             <div className="min-w-0">
               <p className="flex items-center gap-1 text-xs font-medium uppercase tracking-wide text-brand-700">
                 <KeyRound className="h-3 w-3" /> API key (prefijo)

@@ -169,27 +169,27 @@ export function SensorsPage() {
             return (
               <Card
                 key={s.id}
-                className="relative overflow-hidden border-brand-100/80 bg-gradient-to-br from-white to-brand-50/40"
+                className="relative overflow-hidden border-brand-100/80 bg-surface"
               >
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-5">
                   <div className="order-first flex justify-end gap-1 sm:order-last sm:flex-col sm:self-start">
                     <Link
                       to={`/greenhouses/${greenhouseId}/alerts?sensor=${s.id}`}
-                      className="rounded-lg p-2 text-neutral-400 hover:bg-brand-50 hover:text-brand-700 sm:p-1"
+                      className="rounded-lg p-2 text-neutral-500 hover:bg-brand-50 hover:text-brand-700 sm:p-1"
                       title="Crear regla de alerta"
                     >
                       <BellPlus className="h-4 w-4" />
                     </Link>
                     <button
                       onClick={() => setEditing(s)}
-                      className="rounded-lg p-2 text-neutral-400 hover:bg-brand-50 hover:text-brand-700 sm:p-1"
+                      className="rounded-lg p-2 text-neutral-500 hover:bg-brand-50 hover:text-brand-700 sm:p-1"
                       title="Editar"
                     >
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => setToDelete(s.id)}
-                      className="rounded-lg p-2 text-neutral-400 hover:bg-red-50 hover:text-red-600 sm:p-1"
+                      className="rounded-lg p-2 text-neutral-500 hover:bg-red-50 hover:text-red-600 sm:p-1"
                       title="Eliminar"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -221,7 +221,7 @@ export function SensorsPage() {
                         </span>
                       </p>
                       <p className="text-xs text-neutral-500">{s.sensor_type_name}</p>
-                      <p className="mt-0.5 text-xs text-neutral-400">
+                      <p className="mt-0.5 text-xs text-neutral-500">
                         {s.is_active ? "🌱 Activo" : "Inactivo"}
                         {live?.timestamp && ` · última lectura ${new Date(live.timestamp).toLocaleTimeString()}`}
                       </p>
@@ -385,9 +385,9 @@ export function SensorsPage() {
               <b>{created.name}</b> ya existe. Este es el número que tu Arduino/ESP32 debe mandar como{" "}
               <code>sensor_id</code> al ingestar lecturas:
             </p>
-            <div className="mb-4 flex items-center justify-between rounded-2xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-4">
+            <div className="mb-4 flex items-center justify-between rounded-2xl border border-brand-200 bg-brand-50/60 p-4">
               <p className="font-mono text-4xl font-bold text-brand-900">{created.id}</p>
-              <CopyButton text={String(created.id)} label="Copiar ID" className="border border-brand-200 bg-white" />
+              <CopyButton text={String(created.id)} label="Copiar ID" className="border border-brand-200 bg-surface" />
             </div>
             {!created.device && (
               <p className="mb-4 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">

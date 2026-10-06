@@ -48,7 +48,7 @@ export function SensorIcon({
         flash ? "animate-flash-ring bg-brand-50" : ""
       }`}
     >
-      <Icon className={`${className} ${preset?.color ?? "text-neutral-400"} ${motion}`} />
+      <Icon className={`${className} ${preset?.color ?? "text-neutral-500"} ${motion}`} />
     </span>
   );
 }
@@ -56,5 +56,5 @@ export function SensorIcon({
 export function ActuatorIcon({ code, className = "h-5 w-5" }: { code: string; className?: string }) {
   const preset = findActuatorPreset(code);
   const Icon = preset?.icon ?? ToggleLeft;
-  return <Icon className={`${className} ${preset?.color ?? "text-neutral-400"}`} />;
+  return <Icon className={`${className} ${preset?.color ?? "text-neutral-500"}`} />;
 }

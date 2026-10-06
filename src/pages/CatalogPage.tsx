@@ -1,3 +1,5 @@
+import { motion } from "framer-motion";
+import { spring } from "../lib/motion";
 import { useState } from "react";
 import { BookMarked, Cpu, Globe, Home, Pencil, Plus, ToggleLeft, Trash2 } from "lucide-react";
 import {
@@ -139,7 +141,7 @@ export function CatalogPage() {
         }
       />
 
-      <div className="mb-5 inline-flex rounded-xl border border-brand-100 bg-white p-1 shadow-sm">
+      <div className="mb-5 inline-flex rounded-xl border border-brand-100 bg-surface p-1 shadow-sm">
         {(
           [
             ["sensors", "Sensores", Cpu],
@@ -149,12 +151,20 @@ export function CatalogPage() {
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-semibold transition ${
-              tab === key ? "bg-gradient-to-r from-brand-600 to-emerald-500 text-white shadow" : "text-neutral-600 hover:bg-brand-50"
+            className={`relative inline-flex min-h-[38px] items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors ${
+              tab === key ? "text-white dark:text-neutral-50" : "text-neutral-600 hover:bg-brand-50 hover:text-neutral-900"
             }`}
+            aria-pressed={tab === key}
           >
-            <Icon className="h-4 w-4" /> {label}
-            <span className={`rounded-full px-1.5 text-[11px] ${tab === key ? "bg-white/25" : "bg-brand-50 text-brand-700"}`}>
+            {tab === key && (
+              <motion.span
+                layoutId="catalog-tab"
+                className="absolute inset-0 rounded-lg bg-brand-700 shadow-sm dark:bg-brand-500"
+                transition={spring}
+              />
+            )}
+            <Icon className="relative h-4 w-4" /> <span className="relative">{label}</span>
+            <span className={`relative rounded-full px-1.5 text-[11px] ${tab === key ? "bg-white/25" : "bg-brand-50 text-brand-700"}`}>
               {key === "sensors" ? sensorTypes?.length ?? 0 : actuatorTypes?.length ?? 0}
             </span>
           </button>
@@ -176,7 +186,7 @@ export function CatalogPage() {
                 {t.can_edit && (<div className="absolute right-3 top-3 flex gap-1">
                   <button
                     onClick={() => openEdit(t)}
-                    className="rounded-lg p-2 text-neutral-400 sm:p-1 hover:bg-brand-50 hover:text-brand-700"
+                    className="rounded-lg p-2 text-neutral-500 sm:p-1 hover:bg-brand-50 hover:text-brand-700"
                     title="Editar"
                   >
                     <Pencil className="h-4 w-4" />
@@ -186,7 +196,7 @@ export function CatalogPage() {
                       remove.reset();
                       setToDelete({ id: t.id, name: t.name });
                     }}
-                    className="rounded-lg p-2 text-neutral-400 sm:p-1 hover:bg-red-50 hover:text-red-600"
+                    className="rounded-lg p-2 text-neutral-500 sm:p-1 hover:bg-red-50 hover:text-red-600"
                     title="Eliminar"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -197,7 +207,7 @@ export function CatalogPage() {
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl"
                     style={{ background: `${preset?.hex ?? "#94a3b8"}22` }}
                   >
-                    {Icon ? <Icon className="h-5 w-5" style={{ color: preset?.hex }} /> : <BookMarked className="h-5 w-5 text-neutral-400" />}
+                    {Icon ? <Icon className="h-5 w-5" style={{ color: preset?.hex }} /> : <BookMarked className="h-5 w-5 text-neutral-500" />}
                   </span>
                   <div className="min-w-0">
                     <p className="truncate font-semibold text-neutral-900">{t.name}</p>
@@ -236,7 +246,7 @@ export function CatalogPage() {
             <Field>
               <Label>Alcance</Label>
               <select
-                className="w-full rounded-xl border border-brand-100 bg-white px-3 py-2 text-sm disabled:bg-neutral-50"
+                className="w-full rounded-xl border border-brand-100 bg-surface px-3 py-2 text-sm disabled:bg-neutral-50"
                 value={draft.greenhouse}
                 disabled={draft.id != null}
                 onChange={(e) => setDraft({ ...draft, greenhouse: e.target.value })}

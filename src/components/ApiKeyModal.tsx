@@ -26,7 +26,7 @@ export function ApiKeyModal({
       </p>
       <div className="flex items-center gap-2 rounded-xl border border-brand-200 bg-brand-50/60 p-3">
         <code className="flex-1 break-all font-mono text-sm text-neutral-900">{apiKey}</code>
-        <CopyButton text={apiKey} label="Copiar" className="border border-brand-200 bg-white" />
+        <CopyButton text={apiKey} label="Copiar" className="border border-brand-200 bg-surface" />
       </div>
       <div className="mt-5 flex justify-end border-t border-brand-50 pt-4">
         <Button onClick={onClose}>Listo</Button>

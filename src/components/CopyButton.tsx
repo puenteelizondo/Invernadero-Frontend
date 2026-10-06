@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Check, Copy } from "lucide-react";
+import { toast } from "./Toaster";
 
 /** Botón chiquito que copia `text` al portapapeles y confirma con una palomita. */
 export function CopyButton({ text, label, className = "" }: { text: string; label?: string; className?: string }) {
@@ -21,6 +22,7 @@ export function CopyButton({ text, label, className = "" }: { text: string; labe
       area.remove();
     }
     setCopied(true);
+    toast("Copiado al portapapeles");
     setTimeout(() => setCopied(false), 1500);
   }
 

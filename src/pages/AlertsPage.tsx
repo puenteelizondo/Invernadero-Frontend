@@ -1,3 +1,6 @@
+import { AnimatePresence, motion } from "framer-motion";
+import { HealthyPlantIllustration } from "../components/Illustrations";
+import { spring } from "../lib/motion";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router-dom";
 import { AlertTriangle, Bell, BellRing, CheckCheck, Eraser, Mail, Pencil, Plus, ShieldAlert, Trash2, WifiOff } from "lucide-react";
@@ -179,7 +182,7 @@ export function AlertsPage() {
             <p className="mt-1 text-sm text-neutral-700">
               {a.kind === "stale" ? (
                 <>
-                  <WifiOff className="mr-1 inline h-4 w-4 text-neutral-400" />
+                  <WifiOff className="mr-1 inline h-4 w-4 text-neutral-500" />
                   Sin datos {isActive ? "desde hace" : "durante"} <b>{fmtDuration(a.peak_value)}</b> (se toleran {fmtDuration(a.threshold)}).
                 </>
               ) : (
@@ -188,7 +191,7 @@ export function AlertsPage() {
                   <b>{a.peak_value}{u}</b>
                 </>
               )}
-              {a.rule_name && <span className="text-neutral-400"> · {a.rule_name}</span>}
+              {a.rule_name && <span className="text-neutral-500"> · {a.rule_name}</span>}
             </p>
             <p className="mt-1 text-xs text-neutral-500">
               Desde {fmtDate(a.opened_at)}
@@ -226,19 +229,27 @@ export function AlertsPage() {
         }
       />
 
-      <div className="mb-5 inline-flex rounded-xl border border-brand-100 bg-white p-1 shadow-sm">
+      <div className="mb-5 inline-flex rounded-xl border border-brand-100 bg-surface p-1 shadow-sm">
         {tabs.map(([key, label, count]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
-            className={`inline-flex items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-semibold transition ${
-              tab === key ? "bg-gradient-to-r from-brand-600 to-emerald-500 text-white shadow" : "text-neutral-600 hover:bg-brand-50"
+            className={`relative inline-flex min-h-[38px] items-center gap-2 rounded-lg px-4 py-1.5 text-sm font-semibold transition-colors ${
+              tab === key ? "text-white dark:text-neutral-50" : "text-neutral-600 hover:bg-brand-50 hover:text-neutral-900"
             }`}
+            aria-pressed={tab === key}
           >
-            {label}
+            {tab === key && (
+              <motion.span
+                layoutId="alerts-tab"
+                className="absolute inset-0 rounded-lg bg-brand-700 shadow-sm dark:bg-brand-500"
+                transition={spring}
+              />
+            )}
+            <span className="relative">{label}</span>
             {count != null && (
               <span
-                className={`rounded-full px-1.5 text-[11px] ${
+                className={`relative rounded-full px-1.5 text-[11px] ${
                   tab === key ? "bg-white/25" : key === "active" && count > 0 ? "bg-red-100 text-red-700" : "bg-brand-50 text-brand-700"
                 }`}
               >
@@ -255,9 +266,28 @@ export function AlertsPage() {
         (activeLoading ? (
           <Spinner />
         ) : !active?.results.length ? (
-          <EmptyState title="Sin alertas activas" hint="Todo está dentro de los límites. Crea reglas en la pestaña «Reglas»." />
+          <div className="flex flex-col items-center rounded-[1.25rem] border border-emerald-200 bg-emerald-50/60 px-6 py-10 text-center">
+            <HealthyPlantIllustration className="mb-2 h-24 w-28" />
+            <p className="font-display text-lg font-semibold text-neutral-900">Sin alertas activas</p>
+            <p className="mt-1 max-w-md text-sm text-neutral-600">Todo está dentro de los límites. Crea reglas en la pestaña «Reglas» para que te avisemos si algo cambia.</p>
+          </div>
         ) : (
-          <div className="space-y-3">{active.results.map((a) => <AlertCard key={a.id} a={a} />)}</div>
+          <ul className="space-y-3">
+            <AnimatePresence initial={false}>
+              {active.results.map((a) => (
+                <motion.li
+                  key={a.id}
+                  layout
+                  initial={{ opacity: 0, y: -10, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, x: 40, transition: { duration: 0.2 } }}
+                  transition={spring}
+                >
+                  <AlertCard a={a} />
+                </motion.li>
+              ))}
+            </AnimatePresence>
+          </ul>
         ))}
 
       {tab === "history" && canManage && (
@@ -303,12 +333,12 @@ export function AlertsPage() {
               <Card key={r.id} className="relative">
                 {canManage && (
                   <div className="absolute right-3 top-3 flex gap-1">
-                    <button onClick={() => openEdit(r)} className="rounded-lg p-2 text-neutral-400 sm:p-1 hover:bg-brand-50 hover:text-brand-700" title="Editar">
+                    <button onClick={() => openEdit(r)} className="rounded-lg p-2 text-neutral-500 sm:p-1 hover:bg-brand-50 hover:text-brand-700" title="Editar">
                       <Pencil className="h-4 w-4" />
                     </button>
                     <button
                       onClick={() => { remove.reset(); setToDelete(r); }}
-                      className="rounded-lg p-2 text-neutral-400 sm:p-1 hover:bg-red-50 hover:text-red-600"
+                      className="rounded-lg p-2 text-neutral-500 sm:p-1 hover:bg-red-50 hover:text-red-600"
                       title="Eliminar"
                     >
                       <Trash2 className="h-4 w-4" />

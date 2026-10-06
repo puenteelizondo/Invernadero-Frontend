@@ -71,7 +71,7 @@ export function ActuatorDetailPage() {
 
       <Card
         className={`mb-6 transition duration-300 ${
-          on ? "border-emerald-200 bg-gradient-to-br from-white to-emerald-50" : "bg-gradient-to-br from-white to-neutral-50"
+          on ? "border-emerald-200 bg-surface" : "bg-surface"
         }`}
       >
         <div className="flex flex-wrap items-center justify-between gap-5">
@@ -92,12 +92,15 @@ export function ActuatorDetailPage() {
             onClick={() => setState.mutate({ id: actuator.id, state: !on })}
             disabled={setState.isPending}
             className={`relative h-9 w-16 rounded-full shadow-inner transition disabled:opacity-60 ${
-              on ? "bg-gradient-to-r from-brand-600 to-emerald-500" : "bg-neutral-300"
+              on ? "bg-brand-600" : "bg-neutral-300"
             }`}
             title={on ? "Apagar" : "Encender"}
+            role="switch"
+            aria-checked={on}
+            aria-label={on ? "Apagar" : "Encender"}
           >
             <span
-              className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow-md transition-all ${on ? "left-8" : "left-1"}`}
+              className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow-md transition-all duration-300 ease-leaf ${on ? "left-8" : "left-1"}`}
             />
           </button>
         </div>
@@ -109,7 +112,7 @@ export function ActuatorDetailPage() {
       <ActuatorConnectPanel actuator={actuator} greenhouseId={greenhouseId} />
 
       <Card>
-        <h2 className="mb-3 flex items-center gap-2 font-medium text-neutral-900">
+        <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-neutral-900">
           <History className="h-4 w-4" /> Historial de cambios
         </h2>
         {historyLoading ? (
@@ -133,7 +136,7 @@ export function ActuatorDetailPage() {
                     {h.source === "manual" ? `Manual${h.changed_by_username ? ` · ${h.changed_by_username}` : ""}` : "Automatización"}
                   </span>
                 </div>
-                <span className="text-xs text-neutral-400">{new Date(h.changed_at).toLocaleString()}</span>
+                <span className="text-xs text-neutral-500">{new Date(h.changed_at).toLocaleString()}</span>
               </li>
             ))}
           </ul>

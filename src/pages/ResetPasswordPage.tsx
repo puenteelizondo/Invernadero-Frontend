@@ -37,7 +37,7 @@ export function ResetPasswordPage() {
       >
         <Link
           to="/forgot-password"
-          className="block rounded-xl bg-gradient-to-r from-brand-600 to-emerald-500 px-4 py-3 text-center text-sm font-semibold text-white shadow-lg shadow-brand-600/30"
+          className="flex min-h-[50px] items-center justify-center rounded-2xl bg-brand-700 px-4 py-3 text-center text-[0.95rem] font-semibold text-white hover:bg-brand-800 dark:bg-brand-500 dark:text-neutral-50"
         >
           Pedir uno nuevo
         </Link>
