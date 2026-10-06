@@ -4,6 +4,8 @@ import { api } from "../lib/api";
 import { qk } from "../lib/queryClient";
 import type {
   ActuatorStateChangedEventPayload,
+  ControlLoop,
+  ControlTelemetry,
   RealtimeEvent,
   SensorReadingEventPayload,
   SnapshotPayload,
@@ -20,6 +22,14 @@ export interface SeriesPoint {
   // Es la única forma de saber esto: /readings/ solo puede devolver
   // lo que sí quedó guardado, nunca lo que se descartó por caché.
   persisted: boolean;
+}
+
+/** Un punto de la telemetría de un lazo (la reporta el controlador por WebSocket). */
+export interface LoopPoint {
+  t: number;
+  pv: number | null;
+  setpoint: number | null;
+  output: number | null;
 }
 
 export interface LiveEvent {
@@ -40,6 +50,8 @@ const LIVE_SERIES_MAX_POINTS = 40;
 // Cuántos eventos recientes se guardan para el "feed" de actividad en
 // vivo (ver LiveActivityFeed.tsx), sin importar de qué sensor sean.
 const LIVE_EVENTS_MAX = 30;
+// Puntos de telemetría de control que se conservan por lazo (~3 min a 1 muestra/s).
+const LOOP_POINTS_MAX = 180;
 
 /**
  * Hook de tiempo real para un invernadero.
@@ -67,6 +79,7 @@ export function useRealtime(greenhouseId: number | null) {
   const [snapshot, setSnapshot] = useState<SnapshotPayload | null>(null);
   const [series, setSeries] = useState<Record<number, SeriesPoint[]>>({});
   const [events, setEvents] = useState<LiveEvent[]>([]);
+  const [telemetry, setTelemetry] = useState<Record<number, LoopPoint[]>>({});
   const socketRef = useRef<WebSocket | null>(null);
   const retryRef = useRef(0);
   const closedByUsRef = useRef(false);
@@ -163,6 +176,49 @@ export function useRealtime(greenhouseId: number | null) {
         return;
       }
 
+      if (msg.event === "control_telemetry") {
+        const p = msg.payload as ControlTelemetry;
+        setTelemetry((prev) => {
+          const point: LoopPoint = {
+            t: new Date(p.ts ?? msg.timestamp).getTime(),
+            pv: p.pv,
+            setpoint: p.setpoint,
+            output: p.output,
+          };
+          return { ...prev, [p.loop_id]: [...(prev[p.loop_id] ?? []), point].slice(-LOOP_POINTS_MAX) };
+        });
+        return;
+      }
+
+      if (msg.event === "control_loop_applied" && greenhouseId) {
+        // El dispositivo confirmó (ack) una versión: se refleja al instante sin esperar un refetch.
+        const p = msg.payload as { loop_id: number; applied_version: number; applied_at: string };
+        qc.setQueryData<ControlLoop[]>(qk.controlLoops(greenhouseId), (old) =>
+          old?.map((l) =>
+            l.id === p.loop_id
+              ? { ...l, applied_version: p.applied_version, applied_at: p.applied_at, pending: p.applied_version < l.version }
+              : l
+          )
+        );
+        return;
+      }
+
+      if (msg.event === "device_connection" && greenhouseId) {
+        const p = msg.payload as { device_id: number; online: boolean };
+        qc.setQueryData<ControlLoop[]>(qk.controlLoops(greenhouseId), (old) =>
+          old?.map((l) => (l.device === p.device_id ? { ...l, device_online: p.online } : l))
+        );
+        qc.invalidateQueries({ queryKey: qk.devices(greenhouseId) });
+        return;
+      }
+
+      if ((msg.event === "control_loop_updated" || msg.event === "control_loop_deleted") && greenhouseId) {
+        qc.invalidateQueries({ queryKey: qk.controlLoops(greenhouseId) });
+        const loopId = (msg.payload as { loop_id?: number }).loop_id;
+        if (loopId) qc.invalidateQueries({ queryKey: qk.controlHistory(loopId) });
+        return;
+      }
+
       if (msg.event === "actuator_state_changed") {
         const payload = msg.payload as ActuatorStateChangedEventPayload;
         setSnapshot((prev) => {
@@ -248,9 +304,10 @@ export function useRealtime(greenhouseId: number | null) {
       setSnapshot(null);
       setSeries({});
       setEvents([]);
+      setTelemetry({});
       setStatus("idle");
     };
   }, [greenhouseId, handleEvent]);
 
-  return { status, snapshot, series, events };
+  return { status, snapshot, series, events, telemetry };
 }

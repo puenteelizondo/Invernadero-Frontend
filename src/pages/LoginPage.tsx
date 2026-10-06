@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Lock, User } from "lucide-react";
 import { useLogin, useMe } from "../hooks/useAuth";
 import { formatApiError } from "../lib/api";
-import { AuthButton, AuthField, AuthShell, authLinkClass } from "../components/AuthShell";
+import { AuthButton, AuthField, AuthShell } from "../components/AuthShell";
 
 export function LoginPage() {
   const { data: me } = useMe();
@@ -27,14 +27,7 @@ export function LoginPage() {
     <AuthShell
       title="Bienvenido de vuelta"
       subtitle="Entra para ver cómo va tu invernadero."
-      footer={
-        <>
-          ¿No tienes cuenta?{" "}
-          <Link to="/register" className={authLinkClass}>
-            Regístrate
-          </Link>
-        </>
-      }
+      footer={<>¿Necesitas acceso? Pídeselo a tu administrador.</>}
     >
       <form onSubmit={onSubmit}>
         <AuthField

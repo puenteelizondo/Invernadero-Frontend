@@ -37,6 +37,9 @@ export const qk = {
   devices: (greenhouseId: number) => ["devices", greenhouseId] as const,
   zones: (greenhouseId: number) => ["zones", greenhouseId] as const,
   memberships: (greenhouseId: number) => ["memberships", greenhouseId] as const,
+  adminUsers: ["admin-users"] as const,
+  controlLoops: (greenhouseId: number) => ["control-loops", greenhouseId] as const,
+  controlHistory: (loopId: number) => ["control-loops", "history", loopId] as const,
   alertRules: (greenhouseId: number) => ["alert-rules", greenhouseId] as const,
   // Prefijo común de todas las listas de alertas de un invernadero (para invalidar de golpe).
   alertsAll: (greenhouseId: number) => ["alerts", greenhouseId] as const,

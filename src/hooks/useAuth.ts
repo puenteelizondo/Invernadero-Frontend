@@ -60,13 +60,6 @@ export function useLogout() {
   });
 }
 
-export function useRegister() {
-  return useMutation({
-    mutationFn: async (vars: { username: string; password: string; email?: string }) =>
-      (await api.post<User>("/auth/register/", vars)).data,
-  });
-}
-
 export function useRequestPasswordReset() {
   return useMutation({
     mutationFn: async (vars: { email: string }) =>

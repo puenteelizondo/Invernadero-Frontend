@@ -1,10 +1,14 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { AlertTriangle, Cable, Info } from "lucide-react";
-import { useDevices, useUpdateSensor } from "../hooks/useGreenhouses";
+import { useDevices, useSensorTypeCodeMap, useSensorTypes, useUpdateSensor } from "../hooks/useGreenhouses";
+import { useControlLoops } from "../hooks/useControl";
+import { buildSensorSketch } from "../lib/firmwareSimple";
+import { ArduinoSteps, CodeView, ConnectTips, HostWarning, NetFields, SensorReadFields, useNetSettings, type SensorReadValue } from "./FirmwareBits";
 import { formatApiError } from "../lib/api";
 import type { Sensor } from "../types";
 import { CopyButton } from "./CopyButton";
-import { Button, Card, ErrorText, Select } from "./ui";
+import { Button, Card, ErrorText, Input, Select } from "./ui";
 
 /**
  * Todo lo que hace falta para que un controlador físico (Arduino/ESP32)
@@ -22,54 +26,36 @@ import { Button, Card, ErrorText, Select } from "./ui";
  */
 export function SensorConnectPanel({ sensor, greenhouseId }: { sensor: Sensor; greenhouseId: number }) {
   const { data: devices } = useDevices(greenhouseId);
+  const { data: sensorTypes } = useSensorTypes();
+  const typeCodeById = useSensorTypeCodeMap();
+  const { data: loops } = useControlLoops(greenhouseId);
   const updateSensor = useUpdateSensor(greenhouseId);
   const [deviceId, setDeviceId] = useState<number | "">(sensor.device ?? "");
 
   const device = devices?.find((d) => d.id === sensor.device);
-  const intervalMs = Math.max(1, sensor.reading_interval_seconds || 10) * 1000;
 
-  const code = `#include <WiFi.h>
-#include <HTTPClient.h>
+  const [net, setNet] = useNetSettings();
+  const type = sensorTypes?.find((x) => x.id === sensor.sensor_type);
+  const [readHw, setReadHw] = useState<SensorReadValue>({
+    read: "custom",
+    pin: 34,
+    min: type?.valid_min ?? 0,
+    max: type?.valid_max ?? 100,
+  });
+  const [intervalS, setIntervalS] = useState(Math.max(1, sensor.reading_interval_seconds || 10));
+  const myLoops = (loops ?? []).filter((l) => l.sensor === sensor.id);
 
-const char* WIFI_SSID  = "TU_WIFI";
-const char* WIFI_PASS  = "TU_PASSWORD";
-
-// Dirección del backend: la IP de la computadora donde corre (ipconfig) y el puerto 8000.
-const char* URL        = "http://<IP-DE-TU-PC>:8000/api/v1/readings/ingest/";
-
-// API key completa del dispositivo (se ve una sola vez al crearlo o rotarla).
-const char* DEVICE_KEY = "PEGA_AQUI_LA_API_KEY_DEL_DISPOSITIVO";
-
-// ID de ESTE sensor en el sistema.
-const int SENSOR_ID = ${sensor.id};
-
-const unsigned long INTERVALO_MS = ${intervalMs};
-
-void setup() {
-  Serial.begin(115200);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED) delay(500);
-}
-
-void enviarLectura(float valor) {
-  HTTPClient http;
-  http.begin(URL);
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("X-Device-Key", DEVICE_KEY);
-
-  String body = "{\\"sensor_id\\":" + String(SENSOR_ID) + ",\\"value\\":" + String(valor, 2) + "}";
-  int status = http.POST(body);
-
-  Serial.println(status);            // 200 = llegó bien
-  Serial.println(http.getString());  // detalle: accepted / persisted / rejected
-  http.end();
-}
-
-void loop() {
-  float valor = 0; // <- aquí lee tu sensor real
-  enviarLectura(valor);
-  delay(INTERVALO_MS);
-}`;
+  const sketch = buildSensorSketch({
+    ...net,
+    deviceName: device?.name ?? "",
+    keyPrefix: device?.key_prefix ?? "",
+    sensorId: sensor.id,
+    sensorName: sensor.name,
+    unit: sensor.effective_unit,
+    code: typeCodeById.get(sensor.sensor_type) ?? "",
+    intervalMs: intervalS * 1000,
+    ...readHw,
+  });
 
   const json = `POST /api/v1/readings/ingest/
 X-Device-Key: <api key del dispositivo>
@@ -162,20 +148,59 @@ Content-Type: application/json
         </p>
       </div>
 
-      {/* Código */}
-      <div className="mb-3">
-        <div className="mb-1.5 flex items-center justify-between">
-          <p className="text-sm font-semibold text-neutral-700">Ejemplo para Arduino IDE (ESP32)</p>
-          <CopyButton text={code} label="Copiar código" />
+      {/* Programa */}
+      <div className="mb-4 space-y-4 rounded-2xl border border-neutral-200 p-4">
+        <div>
+          <h3 className="font-semibold text-neutral-900">Programa para el ESP32 (Arduino)</h3>
+          <p className="text-xs text-neutral-500">Manda las lecturas de este sensor cada cierto tiempo. Llena los campos y el código se arma solo.</p>
         </div>
-        <pre className="max-h-80 overflow-auto rounded-xl bg-neutral-900 p-4 text-xs leading-relaxed text-emerald-100">
-          <code>{code}</code>
-        </pre>
-        <p className="mt-1.5 text-xs text-neutral-500">
-          Si el backend responde <code>400</code> al probar desde otra máquina, agrega la IP de tu PC a{" "}
-          <code>DJANGO_ALLOWED_HOSTS</code> en el <code>.env</code> del backend. Un Arduino sin WiFi (Uno/Nano) no
-          puede hacer esta petición por sí solo: necesita un ESP32/ESP8266 o un módulo WiFi.
-        </p>
+
+        {myLoops.length > 0 && (
+          <p className="flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-900">
+            <Info className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>
+              Este sensor está en el lazo {myLoops.map((l) => `“${l.name}”`).join(", ")}. Un ESP32 solo puede tener un
+              programa: usa el de la página{" "}
+              <Link to={`/greenhouses/${greenhouseId}/control`} className="font-semibold underline">Control</Link>, que
+              ya manda las lecturas de este sensor y además controla el actuador.
+            </span>
+          </p>
+        )}
+
+        <ArduinoSteps libs={null}>
+          <li>
+            Pega en <code>DEVICE_KEY</code> la API key de {device ? <b>{device.name}</b> : "su dispositivo"}
+            {device?.key_prefix ? <> (empieza con <code>{device.key_prefix}</code>)</> : null}. Solo se ve completa al
+            crear o rotar el dispositivo.
+          </li>
+          {readHw.read === "custom" && <li>En <code>leerSensor()</code> escribe cómo se mide (hay ejemplos en el código).</li>}
+        </ArduinoSteps>
+
+        <NetFields net={net} onChange={setNet} />
+
+        <fieldset>
+          <legend className="mb-2 text-sm font-semibold text-neutral-800">Cómo se mide</legend>
+          <div className="flex flex-wrap items-end gap-2">
+            <SensorReadFields value={readHw} onChange={(p) => setReadHw((v) => ({ ...v, ...p }))} />
+            <label className="block w-36">
+              <span className="mb-1 block text-xs text-neutral-600">Cada cuántos segundos</span>
+              <Input type="number" min={1} value={intervalS} onChange={(e) => setIntervalS(Math.max(1, Number(e.target.value) || 1))} />
+            </label>
+          </div>
+          <p className="mt-1.5 text-xs text-neutral-500">
+            Para entradas analógicas solo se ofrecen los GPIO 32–39: los demás no funcionan con el WiFi encendido.
+          </p>
+        </fieldset>
+
+        <HostWarning host={net.host} />
+        <ConnectTips port={net.port} />
+
+        <CodeView
+          settings={sketch.settings}
+          full={sketch.full}
+          filename="sensor_invernadero"
+          note={<>Un Arduino sin WiFi (Uno/Nano) no puede mandar lecturas solo: necesita un ESP32 o un módulo WiFi.</>}
+        />
       </div>
 
       <details className="rounded-xl border border-neutral-200 p-3">

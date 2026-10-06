@@ -1,13 +1,12 @@
 import { Suspense, useEffect, useState, type ReactNode } from "react";
-import { Link, useLocation, useMatch, useOutlet } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { Link, Outlet, useLocation, useMatch } from "react-router-dom";
 import { BellRing, Menu } from "lucide-react";
 import { Sidebar } from "./Sidebar";
 import { BrandMark } from "./BrandMark";
 import { ThemeToggle } from "./ThemeToggle";
 import { PageSkeleton } from "./ui";
 import { useActiveAlerts } from "../hooks/useAlerts";
-import { pageVariants, useCalm } from "../lib/motion";
+import { PageErrorBoundary } from "./PageErrorBoundary";
 
 /**
  * Las páginas siguen envolviéndose en <Layout> como antes, pero el marco
@@ -18,13 +17,6 @@ import { pageVariants, useCalm } from "../lib/motion";
  */
 export function Layout({ children }: { children: ReactNode }) {
   return <>{children}</>;
-}
-
-/** Congela el contenido de la ruta saliente mientras hace su animación de salida. */
-function FrozenOutlet() {
-  const outlet = useOutlet();
-  const [frozen] = useState(outlet);
-  return frozen;
 }
 
 function MobileAlertsBell() {
@@ -51,7 +43,6 @@ function MobileAlertsBell() {
 
 export function AppShell() {
   const location = useLocation();
-  const calm = useCalm();
   const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
@@ -101,19 +92,22 @@ export function AppShell() {
 
         <main id="contenido" className="min-w-0 flex-1 px-4 pb-10 pt-5 sm:px-6 sm:pt-6 lg:px-10 lg:pt-8">
           <div className="mx-auto max-w-6xl">
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.div
-                key={location.pathname}
-                variants={calm ? undefined : pageVariants}
-                initial="initial"
-                animate="enter"
-                exit="exit"
-              >
+            {/*
+              Cada página entra con una animación CSS corta (fade + subir 10 px).
+              Antes había una animación de SALIDA (AnimatePresence mode="wait"): la
+              página nueva esperaba a que terminara la vieja y, a veces, la espera
+              no terminaba y el contenido se quedaba en blanco aunque la URL ya
+              hubiera cambiado. Sin salida, la página nueva se monta siempre al
+              instante. Con "Animaciones: Quietas" o movimiento reducido, index.css
+              deja la animación en 0 ms.
+            */}
+            <div key={location.pathname} className="animate-page-in">
+              <PageErrorBoundary>
                 <Suspense fallback={<PageSkeleton />}>
-                  <FrozenOutlet />
+                  <Outlet />
                 </Suspense>
-              </motion.div>
-            </AnimatePresence>
+              </PageErrorBoundary>
+            </div>
           </div>
         </main>
       </div>

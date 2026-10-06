@@ -14,6 +14,8 @@ import {
   MapPin,
   Router,
   Sheet,
+  SlidersHorizontal,
+  UserCog,
   ToggleLeft,
   Users,
   X,
@@ -170,6 +172,12 @@ function SidebarContent({
           </NavItem>
         )}
 
+        {me?.is_staff && (
+          <NavItem collapsed={collapsed} onNavigate={onNavigate} to="/users" icon={UserCog}>
+            Usuarios
+          </NavItem>
+        )}
+
         {greenhouseId && (
           <>
             <div className={`pb-1 pt-5 text-xs font-medium text-neutral-500 ${collapsed ? "sr-only" : "px-3"}`}>
@@ -178,6 +186,9 @@ function SidebarContent({
             {collapsed && <div aria-hidden className="mx-3 my-3 border-t border-neutral-200" />}
             <NavItem collapsed={collapsed} onNavigate={onNavigate} to={`/greenhouses/${greenhouseId}`} end icon={Gauge}>
               Panel
+            </NavItem>
+            <NavItem collapsed={collapsed} onNavigate={onNavigate} to={`/greenhouses/${greenhouseId}/control`} icon={SlidersHorizontal}>
+              Control
             </NavItem>
             <NavItem collapsed={collapsed} onNavigate={onNavigate} to={`/greenhouses/${greenhouseId}/sensors`} icon={Cpu}>
               Sensores

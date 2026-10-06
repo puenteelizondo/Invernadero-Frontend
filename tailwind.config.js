@@ -98,6 +98,10 @@ export default {
         lift: "0 1px 0 0 rgb(var(--c-neutral-200) / 0.9), 0 18px 36px -18px rgb(var(--c-brand-900) / 0.45)",
       },
       keyframes: {
+        "page-in": {
+          from: { opacity: "0", transform: "translateY(10px)" },
+          to: { opacity: "1", transform: "none" },
+        },
         "spin-slow": { to: { transform: "rotate(360deg)" } },
         sway: {
           "0%, 100%": { transform: "rotate(-8deg)" },
@@ -168,8 +172,33 @@ export default {
           "0%": { transform: "scale(1)", opacity: 0.6 },
           "100%": { transform: "scale(2.2)", opacity: 0 },
         },
+        // Planta viva: vaivén de todo el follaje (amplitud por --sway), rayos de luz,
+        // partículas de CO₂ que se acercan a la planta y destellos de "todo en orden".
+        "plant-sway": {
+          "0%, 100%": { transform: "rotate(calc(var(--sway, 1deg) * -1))" },
+          "50%": { transform: "rotate(var(--sway, 1deg))" },
+        },
+        "ray-pulse": {
+          "0%, 100%": { opacity: "var(--ray, 0.3)" },
+          "50%": { opacity: "calc(var(--ray, 0.3) * 0.55)" },
+        },
+        "co2-in": {
+          "0%": { transform: "translate(0, 0)", opacity: 0 },
+          "20%": { opacity: 0.85 },
+          "100%": { transform: "translate(var(--dx, 40px), var(--dy, 20px))", opacity: 0 },
+        },
+        sparkle: {
+          "0%, 100%": { transform: "scale(0.6)", opacity: 0.2 },
+          "50%": { transform: "scale(1.1)", opacity: 1 },
+        },
+        wave: {
+          "0%": { transform: "translateY(0)", opacity: 0 },
+          "25%": { opacity: 0.75 },
+          "100%": { transform: "translateY(-48px)", opacity: 0 },
+        },
       },
       animation: {
+        "page-in": "page-in 0.28s cubic-bezier(0.22, 1, 0.36, 1) backwards",
         "spin-slow": "spin-slow 4s linear infinite",
         sway: "sway 2.6s ease-in-out infinite",
         bob: "bob 1.8s ease-in-out infinite",
@@ -177,7 +206,7 @@ export default {
         "flash-ring": "flash-ring 0.6s ease-out",
         float: "float 7s ease-in-out infinite",
         drift: "drift 22s linear infinite",
-        rise: "rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) both",
+        rise: "rise 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards",
         shimmer: "shimmer 1.6s linear infinite",
         trickle: "trickle 6s ease-in infinite",
         drip: "drip 1.3s ease-in infinite",
@@ -186,6 +215,11 @@ export default {
         mist: "mist 6s ease-in-out infinite",
         sheen: "sheen 2.8s cubic-bezier(0.22, 1, 0.36, 1) 0.4s 1 both",
         ping1: "ping1 1.4s cubic-bezier(0, 0, 0.2, 1) infinite",
+        "plant-sway": "plant-sway var(--sway-dur, 5s) ease-in-out infinite",
+        "ray-pulse": "ray-pulse 4s ease-in-out infinite",
+        "co2-in": "co2-in 4.5s ease-in infinite",
+        sparkle: "sparkle 2.2s ease-in-out infinite",
+        wave: "wave 3s ease-out infinite",
       },
     },
   },

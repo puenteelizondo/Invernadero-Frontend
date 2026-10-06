@@ -11,6 +11,21 @@ export interface User {
   is_staff: boolean;
 }
 
+/** Usuario tal como lo ve un administrador (GET /admin/users/). */
+export interface AdminUser {
+  id: number;
+  username: string;
+  email: string;
+  first_name: string;
+  last_name: string;
+  is_staff: boolean;
+  is_active: boolean;
+  last_login: string | null;
+  date_joined: string;
+  /** Solo viene justo al crear un usuario sin contraseña: se muestra una única vez. */
+  temporary_password?: string | null;
+}
+
 export interface Zone {
   id: number;
   greenhouse: number;
@@ -26,6 +41,8 @@ export interface Greenhouse {
   timezone: string;
   is_active: boolean;
   zones: Zone[];
+  /** Tu rol aquí (el staff cuenta como owner). Lo calcula el backend. */
+  my_role?: Role | null;
   created_at: string;
   updated_at: string;
 }
@@ -154,7 +171,12 @@ export interface RealtimeEvent<T = unknown> {
     | "actuator_state_changed"
     | "alert_opened"
     | "alert_resolved"
-    | "alert_acknowledged";
+    | "alert_acknowledged"
+    | "control_loop_updated"
+    | "control_loop_applied"
+    | "control_loop_deleted"
+    | "control_telemetry"
+    | "device_connection";
   timestamp: string;
   payload: T;
 }
@@ -242,4 +264,72 @@ export interface Alert {
   resolved_at: string | null;
   acknowledged_at: string | null;
   acknowledged_by_name: string | null;
+}
+
+
+// -- Control (lazos PID/PI/P/On-Off que ejecuta el ESP32) -----------------
+export type ControlMode = "off" | "on_off" | "p" | "pi" | "pid";
+export type ControlDirection = "direct" | "reverse";
+
+export interface ControlTelemetry {
+  loop_id: number;
+  greenhouse_id?: number;
+  device_id?: number;
+  pv: number | null;
+  setpoint: number | null;
+  output: number | null;
+  error: number | null;
+  p: number | null;
+  i: number | null;
+  d: number | null;
+  mode: string;
+  version: number | null;
+  ts: string;
+}
+
+/** Parámetros editables de un lazo (lo que viaja al dispositivo). */
+export interface ControlParams {
+  name: string;
+  sensor: number;
+  actuator: number;
+  mode: ControlMode;
+  direction: ControlDirection;
+  setpoint: number;
+  hysteresis: number;
+  kp: number;
+  ki: number;
+  kd: number;
+  output_min: number;
+  output_max: number;
+  integral_limit: number;
+  sample_time_ms: number;
+  enabled: boolean;
+}
+
+export interface ControlLoop extends ControlParams {
+  id: number;
+  greenhouse: number;
+  device: number;
+  sensor_name: string;
+  actuator_name: string;
+  unit: string;
+  valid_min: number | null;
+  valid_max: number | null;
+  version: number;
+  applied_version: number;
+  applied_at: string | null;
+  pending: boolean;
+  updated_by_name: string | null;
+  updated_at: string;
+  created_at: string;
+  device_online: boolean;
+  last_telemetry: ControlTelemetry | null;
+}
+
+export interface ControlLoopChange {
+  id: number;
+  version: number;
+  changed_by_name: string | null;
+  changes: Record<string, { before: unknown; after: unknown }>;
+  created_at: string;
 }

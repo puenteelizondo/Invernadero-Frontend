@@ -531,8 +531,11 @@ export function useSetActuatorState(greenhouseId: number) {
 export function useActuatorHistory(actuatorId: number | null) {
   return useQuery({
     queryKey: qk.actuatorHistory(actuatorId ?? 0),
-    queryFn: async () =>
-      (await api.get<Page<ActuatorStateHistoryEntry>>(`/actuators/${actuatorId}/history/`)).data.results,
+    // El backend responde una lista simple (últimos 100), no una página; se aceptan ambas formas.
+    queryFn: async () => {
+      const data = (await api.get<Page<ActuatorStateHistoryEntry> | ActuatorStateHistoryEntry[]>(`/actuators/${actuatorId}/history/`)).data;
+      return Array.isArray(data) ? data : data.results ?? [];
+    },
     enabled: actuatorId != null,
   });
 }

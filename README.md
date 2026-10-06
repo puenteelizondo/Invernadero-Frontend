@@ -7,6 +7,9 @@ Panel web para administrar invernaderos, sensores, actuadores y accesos, consumi
 - Crea invernaderos, sensores, actuadores y gestiona membresías (invitar por username/email, cambiar rol, quitar acceso).
 - Muestra lecturas de sensores y estado de actuadores **en vivo** vía WebSocket, con historial y gráfica para cada sensor.
 - Enciende/apaga actuadores a mano.
+- **Control** (`/greenhouses/:id/control`): lazos On/Off, P, PI y PID por actuador. Se editan el setpoint y las ganancias; el cálculo lo hace el ESP32, no el navegador ni el servidor. Cada lazo muestra si el ESP32 ya aplicó la versión ("Enviando…" → "Aplicado por el ESP32") y una gráfica en vivo de setpoint, medición y salida con la telemetría del dispositivo.
+- **Planta viva**: una planta SVG original que reacciona a las lecturas reales (temperatura, humedad, luz, suelo, CO₂, pH, EC, viento). Sin sensor para una variable, la planta queda neutra y aparece un aviso "Sin sensor… Agregar".
+- **Usuarios** (`/users`, solo staff): crear cuentas, activar/desactivar, dar staff y generar contraseñas temporales. El registro público ya no existe.
 - Exporta un invernadero a Excel.
 - A propósito, **nunca** manda una lectura de sensor manualmente. Ese dato lo generan los controladores físicos (Arduino/ESP32/Raspberry Pi, etc.) llamando a `POST /api/v1/readings/` con su propia `X-Device-Key`. Este frontend es de solo-lectura para lecturas: verlas, graficarlas, exportarlas — nunca escribirlas.
 - Para sensores/actuadores nuevos, ofrece una lista de **tipos predesignados** (con ícono y unidad/rango sugeridos) que hacen match con el catálogo real (`SensorType`/`ActuatorType`) del backend por su `code`. Un usuario normal solo puede elegir entre tipos que ya existen en ese catálogo; un usuario `staff` además puede sembrar tipos nuevos con un clic usando esos valores sugeridos (el backend exige `IsAdminUser` para crear tipos — ver `apps/sensors/views.py` y `apps/actuators/views.py` en el backend).
@@ -42,7 +45,7 @@ Así, desde el punto de vista del navegador, todo vive en `http://localhost:5173
 2. Login: `POST /api/v1/auth/login/` con `{ username, password }` → crea la sesión (cookie `sessionid`).
 3. Cada carga de la app pregunta `GET /api/v1/auth/me/`; si responde 401, `ProtectedRoute` redirige a `/login`.
 4. Logout: `POST /api/v1/auth/logout/`.
-5. Registro: `POST /api/v1/auth/register/`.
+5. Registro: **cerrado**. No hay página `/register`; las cuentas las crea un administrador en `/users` (`/api/v1/admin/users/`).
 6. Recuperar contraseña: `POST /api/v1/auth/password-reset/` (siempre responde igual, exista o no el email) → el backend manda un email (o lo imprime en los logs del contenedor en desarrollo) con un enlace a `/reset-password?uid=...&token=...` de este frontend → `ResetPasswordPage` lee esos dos parámetros y llama a `POST /api/v1/auth/password-reset/confirm/`.
 
 ## Tiempo real (WebSocket)
@@ -65,16 +68,25 @@ src/
     sensorPresets.ts       Catálogo de sensores predesignados (ícono, unidad, rango)
     actuatorPresets.ts      Catálogo de actuadores predesignados
   hooks/
-    useAuth.ts            Login/logout/registro/recuperación + sesión actual
+    useAuth.ts            Login/logout/recuperación + sesión actual
     useGreenhouses.ts      Todo el CRUD contra la API (invernaderos, sensores, actuadores, membresías, export)
-    useRealtime.ts         WebSocket por invernadero
+    useRealtime.ts         WebSocket por invernadero (también eventos de control y telemetría)
+    useControl.ts          CRUD de lazos de control + historial + permisos (my_role)
+    useAdminUsers.ts       Gestión de cuentas (solo staff)
   components/              Layout/AppShell, Sidebar, badges, primitivas de UI (Button, Card, Modal...)
     GreenhouseScene.tsx    Escena SVG del invernadero (cielo según la hora, condensación, luces, ventilador, riego)
     ZonePlan.tsx           Plano de zonas visto desde arriba
     Illustrations.tsx      Ilustraciones de estados vacíos ("brote", "planta sana")
     Toaster.tsx            Avisos breves: toast("Copiado")
     AnimatedNumber.tsx     Número que rueda al cambiar de valor
+    PlantScene.tsx         Planta viva (SVG) que reacciona a las lecturas
+    LoopCard.tsx           Tarjeta de un lazo: modo, setpoint, ganancias, Aplicar/Descartar
+    LoopChart.tsx          Gráfica en vivo SP / PV / salida
+    LoopModal.tsx          Crear un lazo (sensor + actuador)
+    Segmented.tsx, SliderField.tsx  Controles de formulario
   lib/theme.ts             Tema claro / oscuro / sistema
+  lib/control.ts           Textos, rangos y ayudas de los parámetros de control
+  lib/plant.ts             Evalúa cada variable (bajo/ideal/alto) y la traduce a la apariencia de la planta
   lib/motion.ts            Curvas y duraciones únicas de toda la app
   pages/                   Una página por ruta
 ```
@@ -140,6 +152,18 @@ El tipo se reconoce por su código o por palabras de su nombre (ver `findActuato
 3. Si no lo dibujas, se usa el medidor genérico automáticamente.
 
 **Accesibilidad.** Foco visible en todo, modales con foco atrapado y cierre con Escape, interruptores con `role="switch"`, enlace "Saltar al contenido", contraste AA en los dos temas, y los estados nunca dependen solo del color (llevan texto o ícono).
+
+## Control y planta viva
+
+**Reglas que no cambian:** la web nunca manda una lectura y nunca calcula el PID. Editar el setpoint y las ganancias sí se permite, porque es configuración.
+
+- **Quién edita:** owner y operator; viewer ve todo en solo lectura; staff todo. La web usa `my_role` del invernadero y el backend lo vuelve a validar.
+- **Cómo se edita un lazo:** los cambios quedan como borrador en la tarjeta. **Aplicar** manda un PATCH solo con lo que cambió; **Descartar** vuelve a los valores del servidor. "Apagado" equivale a `enabled=false`.
+- **Estado del lazo:** *Enviando…* hasta que el ESP32 confirma con `ack`; luego *Aplicado por el ESP32*. Si el dispositivo está desconectado se avisa.
+- **Gráfica en vivo:** usa la telemetría del ESP32 (`control_telemetry`), los últimos ~2 minutos. No se guarda.
+- **Programa para el ESP32:** debajo de los lazos hay un panel que arma el programa de Arduino con los ids reales de los lazos, sensores y actuadores del dispositivo. Ahí se eligen el WiFi, la IP del backend, el pin de cada actuador (relevador o PWM) y si cada sensor es una entrada analógica; se copia o se descarga como `esp32_control.ino`. Nada de eso se guarda ni se envía. La plantilla (`src/lib/firmware/esp32_control.ino`) es una copia de `firmware/esp32_control/esp32_control.ino` del backend: si cambias uno, copia el archivo al otro.
+
+**La planta** (`PlantScene` + `lib/plant.ts`) compara cada lectura contra el setpoint del lazo que controla esa variable. Si no hay lazo, usa tercios del rango válido del tipo de sensor. Si no hay sensor, la variable queda "sin dato" y la planta no cambia por ella. Ejemplos: calor → hojas caídas y tono cálido; suelo seco → tierra agrietada; luz baja → planta pálida y estirada; todo en rango → florece. Los cambios son transiciones CSS, así que el control "Animaciones" (y *movimiento reducido*) las congela. Cada variable tiene también texto e ícono, no solo color, y hay un resumen para lectores de pantalla.
 
 ## Pendientes / ideas para seguir
 
