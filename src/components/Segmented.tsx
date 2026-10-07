@@ -54,7 +54,7 @@ export function Segmented<T extends string>({
             title={o.title}
             onClick={() => onChange(o.value)}
             onKeyDown={(e) => onKey(e, i)}
-            className={`relative min-h-[40px] min-w-0 flex-1 rounded-lg px-2 text-sm font-semibold transition-colors ${
+            className={`relative min-h-[40px] flex-auto whitespace-nowrap rounded-lg px-1.5 text-[13px] font-semibold transition-colors sm:px-2 sm:text-sm ${
               checked ? "text-brand-800" : "text-neutral-600 hover:text-neutral-900"
             } disabled:cursor-not-allowed`}
           >
