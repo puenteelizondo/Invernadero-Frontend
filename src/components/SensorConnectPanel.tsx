@@ -37,7 +37,8 @@ export function SensorConnectPanel({ sensor, greenhouseId }: { sensor: Sensor; g
   const [net, setNet] = useNetSettings();
   const type = sensorTypes?.find((x) => x.id === sensor.sensor_type);
   const [readHw, setReadHw] = useState<SensorReadValue>({
-    read: "custom",
+    // Por defecto, valor de prueba: copiar, pegar y ver llegar lecturas sin cablear nada.
+    read: "test",
     pin: 34,
     min: type?.valid_min ?? 0,
     max: type?.valid_max ?? 100,

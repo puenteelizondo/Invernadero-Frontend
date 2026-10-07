@@ -66,11 +66,11 @@ export function NetFields({ net, onChange }: { net: NetSettings; onChange: (p: P
           <Input type="password" value={net.pass} onChange={(e) => onChange({ pass: e.target.value })} placeholder="TU_CLAVE" autoComplete="new-password" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-neutral-600">IP de la PC con el backend</span>
-          <Input value={net.host} onChange={(e) => onChange({ host: e.target.value.trim() })} placeholder="192.168.1.50" inputMode="decimal" />
+          <span className="mb-1 block text-xs font-medium text-neutral-600">IP o dominio del servidor</span>
+          <Input value={net.host} onChange={(e) => onChange({ host: e.target.value.trim() })} placeholder="192.168.1.50 o tu-dominio.com" />
         </label>
         <label className="block">
-          <span className="mb-1 block text-xs font-medium text-neutral-600">Puerto del backend</span>
+          <span className="mb-1 block text-xs font-medium text-neutral-600">Puerto (8000 local · 443 HTTPS)</span>
           <Input type="number" min={1} max={65535} value={net.port} onChange={(e) => onChange({ port: Number(e.target.value) || 8000 })} />
         </label>
       </div>
@@ -124,7 +124,7 @@ export function ArduinoSteps({ libs, children }: { libs: React.ReactNode | null;
 
 /** Lectura de un sensor: "lo escribo yo" o entrada analógica con pin y rango. */
 export interface SensorReadValue {
-  read: "custom" | "analog";
+  read: "custom" | "analog" | "test";
   pin: number;
   min: number;
   max: number;
@@ -138,6 +138,7 @@ export function SensorReadFields({ value, onChange }: { value: SensorReadValue; 
         <Select value={value.read} onChange={(e) => onChange({ read: e.target.value as SensorReadValue["read"] })}>
           <option value="custom">Lo escribo yo en el código</option>
           <option value="analog">Entrada analógica</option>
+          <option value="test">Valor de prueba (simulado)</option>
         </Select>
       </label>
       {value.read === "analog" && (

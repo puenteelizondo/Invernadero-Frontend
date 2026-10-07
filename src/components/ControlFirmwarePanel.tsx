@@ -226,6 +226,7 @@ export function ControlFirmwarePanel({
                         <Select aria-label={`Cómo se lee ${s.name}`} className={COMPACT} value={s.read} onChange={(e) => set({ read: e.target.value as SensorHw["read"] })}>
                           <option value="custom">Lo escribo yo</option>
                           <option value="analog">Analógica</option>
+                          <option value="test">Valor de prueba</option>
                         </Select>
                       </div>
                       {s.read === "analog" && (

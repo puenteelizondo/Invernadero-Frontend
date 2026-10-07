@@ -7,7 +7,7 @@
  * panel Control (un ESP32 = un programa); estos son para casos sueltos.
  * Nada de esto viaja al servidor: es texto para copiar o descargar.
  */
-import { cf, cstr, line, sensorExamples } from "./firmware";
+import { cf, cleanHost, cstr, line, sensorExamples, testValue, tlsFor } from "./firmware";
 
 export const AJUSTES_START = "// ======================= AJUSTES =======================";
 export const AJUSTES_END = "// =======================================================";
@@ -20,12 +20,14 @@ export interface NetOptions {
 }
 
 function netDefines(n: NetOptions): string[] {
-  const host = n.host.trim() || "IP_DE_TU_PC";
+  const host = cleanHost(n.host) || "IP_DE_TU_PC";
+  const tls = tlsFor(n.port);
   return [
     `#define WIFI_SSID     ${cstr(n.ssid || "TU_WIFI")}`,
     `#define WIFI_PASS     ${cstr(n.pass || "TU_CLAVE")}`,
-    `#define SERVER_HOST   ${cstr(host)}   // IP de la PC donde corre el backend (ipconfig). NO "localhost".`,
-    `#define SERVER_PORT   ${n.port || 8000}`,
+    `#define SERVER_HOST   ${cstr(host)}   // IP o dominio del servidor, sin https:// ni "/". NO "localhost".`,
+    `#define SERVER_PORT   ${n.port || 8000}${tls ? "      // 443 = HTTPS (dominio o túnel de Cloudflare)" : "     // 8000 = HTTP en la red local"}`,
+    `#define USE_TLS       ${tls}${tls ? "      // cifrado (HTTPS)" : "     // true si el servidor usa HTTPS (puerto 443)"}`,
   ];
 }
 
@@ -50,7 +52,9 @@ bool asegurarWiFi() {
 }
 
 String urlBase() {
-  return String("http://") + SERVER_HOST + ":" + SERVER_PORT;
+  // Con USE_TLS la conexión va cifrada (HTTPS). Sin certificado configurado, el ESP32
+  // cifra pero no verifica el certificado del servidor: suficiente para pruebas.
+  return String(USE_TLS ? "https://" : "http://") + SERVER_HOST + ":" + SERVER_PORT;
 }
 `;
 
@@ -64,7 +68,7 @@ export interface SensorSketchOptions extends NetOptions {
   unit: string;
   code: string;
   intervalMs: number;
-  read: "custom" | "analog";
+  read: "custom" | "analog" | "test";
   pin: number;
   min: number;
   max: number;
@@ -83,7 +87,9 @@ export function buildSensorSketch(o: SensorSketchOptions): { settings: string; f
   s.push("");
   s.push("// Mide el sensor. Devuelve NAN si no hay medición válida (esa vez no se manda nada).");
   s.push("float leerSensor() {");
-  if (o.read === "analog") {
+  if (o.read === "test") {
+    s.push(...testValue(o.min, o.max, "  "));
+  } else if (o.read === "analog") {
     s.push(`  // Entrada analógica en GPIO ${o.pin}: 0..4095 -> ${o.min}..${o.max} ${line(o.unit)}. Ajusta el rango al calibrar.`);
     s.push(`  return ${cf(o.min)} + analogRead(${o.pin}) * (${cf(o.max)} - ${cf(o.min)}) / 4095.0f;`);
   } else {
