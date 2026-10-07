@@ -10,6 +10,7 @@ import type {
   CursorPage,
   Device,
   Greenhouse,
+  Invitation,
   Membership,
   Page,
   Reading,
@@ -551,12 +552,52 @@ export function useMemberships(greenhouseId: number | null) {
   });
 }
 
+/** Manda una invitación: la persona tiene acceso hasta que la acepta. */
 export function useInviteMember(greenhouseId: number) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { invite: string; role: Membership["role"] }) =>
-      (await api.post<Membership>("/memberships/", { ...vars, greenhouse: greenhouseId })).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.memberships(greenhouseId) }),
+      (await api.post<Invitation>("/invitations/", { ...vars, greenhouse: greenhouseId })).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.sentInvitations(greenhouseId) }),
+  });
+}
+
+/** Invitaciones pendientes que mandaron los propietarios de este invernadero. */
+export function useSentInvitations(greenhouseId: number) {
+  return useQuery({
+    queryKey: qk.sentInvitations(greenhouseId),
+    queryFn: async () =>
+      (await api.get<Page<Invitation>>("/invitations/", { params: { box: "sent", greenhouse: greenhouseId } })).data.results,
+  });
+}
+
+export function useCancelInvitation(greenhouseId: number) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: number) => (await api.post<Invitation>(`/invitations/${id}/cancel/`)).data,
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.sentInvitations(greenhouseId) }),
+  });
+}
+
+/** Invitaciones que me mandaron y siguen pendientes. Se revisan cada minuto y al volver a la pestaña. */
+export function useMyInvitations() {
+  return useQuery({
+    queryKey: qk.myInvitations,
+    queryFn: async () => (await api.get<Page<Invitation>>("/invitations/")).data.results,
+    refetchInterval: 60_000,
+    refetchOnWindowFocus: true,
+  });
+}
+
+export function useAnswerInvitation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, accept }: { id: number; accept: boolean }) =>
+      (await api.post<Invitation>(`/invitations/${id}/${accept ? "accept" : "decline"}/`)).data,
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.myInvitations });
+      qc.invalidateQueries({ queryKey: qk.greenhouses });
+    },
   });
 }
 

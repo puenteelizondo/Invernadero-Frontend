@@ -7,6 +7,7 @@ import { ThemeToggle } from "./ThemeToggle";
 import { PageSkeleton } from "./ui";
 import { useActiveAlerts } from "../hooks/useAlerts";
 import { PageErrorBoundary } from "./PageErrorBoundary";
+import { InvitationsInbox } from "./InvitationsInbox";
 
 /**
  * Las páginas siguen envolviéndose en <Layout> como antes, pero el marco
@@ -92,6 +93,9 @@ export function AppShell() {
 
         <main id="contenido" className="min-w-0 flex-1 px-4 pb-10 pt-5 sm:px-6 sm:pt-6 lg:px-10 lg:pt-8">
           <div className="mx-auto max-w-6xl">
+            <PageErrorBoundary>
+              <InvitationsInbox />
+            </PageErrorBoundary>
             {/*
               Cada página entra con una animación CSS corta (fade + subir 10 px).
               Antes había una animación de SALIDA (AnimatePresence mode="wait"): la

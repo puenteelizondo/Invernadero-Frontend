@@ -37,6 +37,8 @@ export const qk = {
   devices: (greenhouseId: number) => ["devices", greenhouseId] as const,
   zones: (greenhouseId: number) => ["zones", greenhouseId] as const,
   memberships: (greenhouseId: number) => ["memberships", greenhouseId] as const,
+  myInvitations: ["invitations", "received"] as const,
+  sentInvitations: (greenhouseId: number) => ["invitations", "sent", greenhouseId] as const,
   adminUsers: ["admin-users"] as const,
   controlLoops: (greenhouseId: number) => ["control-loops", greenhouseId] as const,
   controlHistory: (loopId: number) => ["control-loops", "history", loopId] as const,

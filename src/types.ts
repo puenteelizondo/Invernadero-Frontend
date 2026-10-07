@@ -147,6 +147,19 @@ export interface Membership {
   created_at: string;
 }
 
+export interface Invitation {
+  id: number;
+  greenhouse: number;
+  greenhouse_name: string;
+  user: number;
+  username: string;
+  role: Role;
+  status: "pending" | "accepted" | "declined" | "cancelled";
+  invited_by_username: string | null;
+  created_at: string;
+  responded_at: string | null;
+}
+
 // Envoltura estándar de paginación por página (PageNumberPagination).
 export interface Page<T> {
   count: number;
