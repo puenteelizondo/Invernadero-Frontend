@@ -19,6 +19,19 @@ export interface NetSettings {
 
 const NET_KEY = "fw-net";
 
+/** ¿Es un dominio (p. ej. algo.trycloudflare.com) y no una IP de red local? */
+export function isDomain(host: string): boolean {
+  const h = host.trim().replace(/^[a-z]+:\/\//i, "").replace(/[/:].*$/, "");
+  return /[a-z]/i.test(h) && !/^localhost$/i.test(h);
+}
+
+/** Puerto que corresponde a la dirección: dominio => 443 (HTTPS), IP => 8000 (HTTP local). */
+function portFor(host: string, current: number): number {
+  if (isDomain(host) && current === 8000) return 443;
+  if (!isDomain(host) && host.trim() && current === 443) return 8000;
+  return current;
+}
+
 function defaultHost(): string {
   const h = window.location.hostname;
   return h === "localhost" || h.startsWith("127.") || h === "::1" || h === "[::1]" ? "" : h;
@@ -36,7 +49,10 @@ export function useNetSettings(): [NetSettings, (p: Partial<NetSettings>) => voi
     } catch {
       /* sin almacenamiento: valores por defecto */
     }
-    return { ssid: saved.ssid ?? "", pass: "", host: saved.host ?? defaultHost(), port: saved.port ?? 8000 };
+    const host = saved.host ?? defaultHost();
+    // Si la página se abrió por HTTPS (dominio o túnel), el ESP32 también debe usar 443.
+    const port = saved.port ?? (window.location.protocol === "https:" ? 443 : 8000);
+    return { ssid: saved.ssid ?? "", pass: "", host, port: portFor(host, port) };
   });
   useEffect(() => {
     try {
@@ -67,7 +83,7 @@ export function NetFields({ net, onChange }: { net: NetSettings; onChange: (p: P
         </label>
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-neutral-600">IP o dominio del servidor</span>
-          <Input value={net.host} onChange={(e) => onChange({ host: e.target.value.trim() })} placeholder="192.168.1.50 o tu-dominio.com" />
+          <Input value={net.host} onChange={(e) => { const host = e.target.value.trim(); onChange({ host, port: portFor(host, net.port) }); }} placeholder="192.168.1.50 o tu-dominio.com" />
         </label>
         <label className="block">
           <span className="mb-1 block text-xs font-medium text-neutral-600">Puerto (8000 local · 443 HTTPS)</span>
