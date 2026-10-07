@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { ChevronLeft, ChevronRight, KeyRound, Plus, Search, ShieldCheck, UserCog, UserPlus } from "lucide-react";
+import { ChevronLeft, ChevronRight, KeyRound, Pencil, Plus, Search, ShieldCheck, UserCog, UserPlus } from "lucide-react";
 import { useMe } from "../hooks/useAuth";
 import { useAdminUsers, useCreateUser, useResetUserPassword, useUpdateUser } from "../hooks/useAdminUsers";
 import { formatApiError } from "../lib/api";
@@ -54,6 +54,8 @@ export function UsersPage() {
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ username: "", email: "", password: "", is_staff: false });
   const [temp, setTemp] = useState<{ username: string; password: string } | null>(null);
+  const [edit, setEdit] = useState<{ user: AdminUser; email: string; first_name: string; last_name: string } | null>(null);
+  const editUser = useUpdateUser();
   const [confirm, setConfirm] = useState<{ kind: "deactivate" | "admin" | "reset"; user: AdminUser } | null>(null);
 
   useEffect(() => {
@@ -80,6 +82,20 @@ export function UsersPage() {
         },
       }
     );
+  }
+
+  function openEdit(u: AdminUser) {
+    editUser.reset();
+    setEdit({ user: u, email: u.email, first_name: u.first_name, last_name: u.last_name });
+  }
+
+  function onEdit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!edit) return;
+    const patch = { email: edit.email.trim(), first_name: edit.first_name.trim(), last_name: edit.last_name.trim() };
+    editUser.mutate({ id: edit.user.id, ...patch }, {
+      onSuccess: () => { toast(`Datos de ${edit.user.username} guardados`); setEdit(null); },
+    });
   }
 
   function runConfirm() {
@@ -180,11 +196,16 @@ export function UsersPage() {
                         )}
                       </p>
                       <p className="truncate text-xs text-neutral-500">
+                        {[u.first_name, u.last_name].filter(Boolean).join(" ")}
+                        {(u.first_name || u.last_name) && " · "}
                         {u.email || "Sin email"} · {u.last_login ? `Último acceso ${new Date(u.last_login).toLocaleString("es-MX")}` : "Nunca ha entrado"}
                       </p>
                     </div>
                   </div>
                   <div className="flex flex-wrap gap-2">
+                    <Button variant="secondary" className="!min-h-[36px] !px-3" onClick={() => openEdit(u)} aria-label={`Editar datos de ${u.username}`}>
+                      <Pencil className="h-4 w-4" /> Editar
+                    </Button>
                     <Button variant="secondary" className="!min-h-[36px] !px-3" onClick={() => setConfirm({ kind: "reset", user: u })}>
                       <KeyRound className="h-4 w-4" /> Contraseña
                     </Button>
@@ -250,6 +271,34 @@ export function UsersPage() {
             </Button>
           </FormActions>
         </form>
+      </Modal>
+
+      <Modal open={edit != null} onClose={() => setEdit(null)} title={edit ? `Editar ${edit.user.username}` : "Editar usuario"} icon={Pencil}>
+        {edit && (
+          <form onSubmit={onEdit}>
+            <Field>
+              <Label>Email</Label>
+              <Input type="email" value={edit.email} onChange={(e) => setEdit({ ...edit, email: e.target.value })} autoComplete="off" autoFocus />
+              <Hint>Ahí le llegan la recuperación de contraseña y, si es dueño de un invernadero, las alertas. Vacío = sin correo.</Hint>
+            </Field>
+            <div className="grid gap-x-3 sm:grid-cols-2">
+              <Field>
+                <Label>Nombre</Label>
+                <Input value={edit.first_name} onChange={(e) => setEdit({ ...edit, first_name: e.target.value })} autoComplete="off" maxLength={150} />
+              </Field>
+              <Field>
+                <Label>Apellidos</Label>
+                <Input value={edit.last_name} onChange={(e) => setEdit({ ...edit, last_name: e.target.value })} autoComplete="off" maxLength={150} />
+              </Field>
+            </div>
+            <Hint>El nombre de usuario (para iniciar sesión) no se puede cambiar.</Hint>
+            <ErrorText>{editUser.isError ? formatApiError(editUser.error) : null}</ErrorText>
+            <FormActions>
+              <Button type="button" variant="secondary" onClick={() => setEdit(null)}>Cancelar</Button>
+              <Button type="submit" loading={editUser.isPending}>Guardar</Button>
+            </FormActions>
+          </form>
+        )}
       </Modal>
 
       <ConfirmDialog

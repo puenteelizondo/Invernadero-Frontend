@@ -25,9 +25,12 @@ export function useCreateUser() {
 export function useUpdateUser() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, ...patch }: { id: number } & Partial<Pick<AdminUser, "is_active" | "is_staff" | "email">>) =>
+    mutationFn: async ({ id, ...patch }: { id: number } & Partial<Pick<AdminUser, "is_active" | "is_staff" | "email" | "first_name" | "last_name">>) =>
       (await api.patch<AdminUser>(`/admin/users/${id}/`, patch)).data,
-    onSuccess: () => qc.invalidateQueries({ queryKey: qk.adminUsers }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: qk.adminUsers });
+      qc.invalidateQueries({ queryKey: qk.me }); // por si se editó a sí mismo
+    },
   });
 }
 
