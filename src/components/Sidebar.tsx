@@ -325,8 +325,18 @@ export function Sidebar({ open = false, onClose = () => {} }: { open?: boolean; 
           aria-label="Menú"
           className="absolute inset-y-0 left-0 w-[19rem] max-w-[86vw] border-r border-neutral-200 bg-surface shadow-2xl"
           initial={false}
-          animate={calm ? { opacity: open ? 1 : 0 } : { x: open ? 0 : "-105%" }}
-          transition={open ? spring : { duration: 0.2 }}
+          // Siempre se fijan AMBOS valores (posición y opacidad). Antes cada modo
+          // movía solo uno, y al cambiar "Animaciones" el otro se quedaba con el
+          // valor viejo (cajón fuera de pantalla o transparente): al reabrir el
+          // menú solo se veía el fondo oscuro hasta recargar.
+          animate={calm ? { x: 0, opacity: open ? 1 : 0 } : { x: open ? 0 : "-105%", opacity: 1 }}
+          transition={
+            calm
+              ? { x: { duration: 0 }, opacity: { duration: 0.15 } }
+              : open
+                ? { x: spring, opacity: { duration: 0 } }
+                : { x: { duration: 0.2 }, opacity: { duration: 0 } }
+          }
           onAnimationComplete={() => !open && setShown(false)}
           drag={calm || !open ? false : "x"}
           dragConstraints={{ left: 0, right: 0 }}
