@@ -130,10 +130,12 @@ export function buildSettings(o: FwOptions): string {
   out.push(`#define PWM_FREQ          1000`);
   out.push(`#define PWM_BITS          10`);
   out.push(`#define RELAY_WINDOW_MS   10000          // ventana de "proporcional en el tiempo" para relevadores`);
-  out.push(`#define INGEST_EVERY_MS   5000           // cada cuánto se mandan las lecturas por HTTP`);
+  out.push(`#define LECTURAS_CADA_MS  1000           // cada cuánto se mandan las lecturas por WebSocket (mín. 200)`);
+  out.push(`#define INGEST_EVERY_MS   5000           // respaldo por HTTP, solo mientras el WebSocket está caído`);
   out.push(`#define HARD_MAX_OUTPUT   100.0f         // tope absoluto de seguridad, pase lo que pase en la config`);
   out.push("");
   out.push("// Qué pin maneja cada actuador (ids = los de la plataforma). relay=true => proporcional en el tiempo.");
+  out.push("// Los que no maneja ningún lazo se prenden/apagan desde la página (llega al instante).");
   out.push("struct Hw { int actuatorId; int pin; bool relay; bool activeLow; };");
   out.push("Hw HW[] = {");
   for (const a of o.actuators) {

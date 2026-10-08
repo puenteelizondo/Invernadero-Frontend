@@ -77,9 +77,16 @@ export function ControlFirmwarePanel({
     });
   }, [sensors, deviceId, devLoops, typeById, typeCodeById, sensorHw]);
 
-  // Actuadores: los que manejan los lazos de este dispositivo.
+  // Actuadores: los que manejan los lazos de este dispositivo y, después, los
+  // manuales (activos y asignados a este dispositivo, sin lazo): esos se prenden
+  // y apagan desde la página y el ESP32 obedece al instante por su WebSocket.
+  const loopActuatorIds = useMemo(() => new Set(devLoops.map((l) => l.actuator)), [devLoops]);
   const fwActuators: FwActuator[] = useMemo(() => {
-    const ids = [...new Set(devLoops.map((l) => l.actuator))];
+    const manual = actuators
+      .filter((a) => a.device === deviceId && a.is_active && !loopActuatorIds.has(a.id))
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((a) => a.id);
+    const ids = [...loopActuatorIds, ...manual];
     return ids.map((id, i) => {
       const a = actuators.find((x) => x.id === id);
       const code = a ? findActuatorPreset(actuatorTypeCodeById.get(a.actuator_type) ?? "", a.actuator_type_name)?.code : undefined;
@@ -92,7 +99,7 @@ export function ControlFirmwarePanel({
         activeLow: hw?.activeLow ?? false,
       };
     });
-  }, [devLoops, actuators, actuatorTypeCodeById, actHw]);
+  }, [devLoops, actuators, actuatorTypeCodeById, actHw, deviceId, loopActuatorIds]);
 
   const options = {
     deviceName: device?.name ?? `Dispositivo ${deviceId}`,
@@ -175,6 +182,11 @@ export function ControlFirmwarePanel({
                   <li key={a.id} className="flex flex-wrap items-center gap-x-3 gap-y-1.5 rounded-xl border border-neutral-200 px-3 py-2">
                     <p className="min-w-0 flex-1 basis-36 truncate text-sm font-medium text-neutral-900" title={a.name}>
                       {a.name} <span className="text-xs font-normal text-neutral-500">id {a.id}</span>
+                      {!loopActuatorIds.has(a.id) && (
+                        <span className="ml-1.5 rounded-full bg-neutral-100 px-1.5 py-0.5 text-[11px] font-medium text-neutral-600" title="Sin lazo: se prende y apaga desde la página">
+                          manual
+                        </span>
+                      )}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
                       <div className="w-28">

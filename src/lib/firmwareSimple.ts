@@ -194,94 +194,146 @@ void loop() {
 /* ---------------------------------------------------------------- actuador */
 
 export interface ActuatorSketchOptions extends NetOptions {
+  deviceName: string;
+  keyPrefix: string;
   actuatorId: number;
   actuatorName: string;
-  user: string;
-  userPass: string;
   pin: number;
   activeLow: boolean;
-  intervalMs: number;
 }
 
 export function buildActuatorSketch(o: ActuatorSketchOptions): { settings: string; full: string } {
   const s: string[] = [AJUSTES_START];
   s.push(`// Generado en la página del actuador "${line(o.actuatorName)}".`);
   s.push(...netDefines(o));
-  s.push("");
-  s.push("// Usuario REAL con acceso a este invernadero (basta rol viewer para leer el estado).");
-  s.push("// Conviene crear uno solo para el dispositivo en la página Usuarios.");
-  s.push(`#define USUARIO       ${cstr(o.user || "usuario_del_dispositivo")}`);
-  s.push(`#define CONTRASENA    ${cstr(o.userPass || "su_contrasena")}`);
+  s.push(
+    `#define DEVICE_KEY    "PEGA_AQUI_LA_API_KEY_DEL_DISPOSITIVO"   // la de "${line(o.deviceName || "tu dispositivo")}"${o.keyPrefix ? `, empieza con ${line(o.keyPrefix)}` : ""}`
+  );
   s.push("");
   s.push(`#define ACTUADOR_ID   ${o.actuatorId}      // ${line(o.actuatorName)}`);
   s.push(`#define PIN_SALIDA    ${o.pin}      // pin que maneja el relevador / transistor`);
   s.push(`#define ACTIVO_EN_LOW ${o.activeLow}   // true si tu módulo de relevador se activa con LOW`);
-  s.push(`#define INTERVALO_MS  ${Math.max(500, Math.round(o.intervalMs))}   // cada cuánto pregunta el estado`);
   s.push(AJUSTES_END);
   const settings = s.join("\n");
 
   const full = `/*
- * Obedece el estado (encendido / apagado) de UN actuador del Invernadero
- * (ESP32 · núcleo Arduino-ESP32 3.x). Pregunta GET /api/v1/actuators/<id>/
- * con un usuario real (Basic Auth) y copia "state" a un pin.
+ * Obedece AL INSTANTE el estado (encendido / apagado) de UN actuador del
+ * Invernadero (ESP32 · núcleo Arduino-ESP32 3.x).
  *
+ * Cómo funciona: con la clave del dispositivo pide un token de un solo uso
+ * (POST /api/v1/devices/ws-token/) y abre el WebSocket /ws/device/. Al
+ * conectarse, el servidor le manda el estado actual; cada vez que alguien
+ * cambia el interruptor en la página, el servidor le avisa en ese momento
+ * (evento "actuator_state"). No pregunta una y otra vez, y no guarda la
+ * contraseña de ninguna persona: solo la clave de SU dispositivo.
+ *
+ * Si se cae la red, CONSERVA el último estado y se reconecta solo.
  * Si este actuador lo maneja un lazo de control, usa en su lugar el programa
  * de la página Control: ahí el ESP32 calcula la salida.
  *
- * Librería (Gestor de librerías): "ArduinoJson" 7.x
+ * Librerías (Gestor de librerías): "WebSockets" de Markus Sattler (Links2004)  y  "ArduinoJson" 7.x
  * Qué debes ajustar: el bloque AJUSTES.
  */
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WebSocketsClient.h>
 #include <ArduinoJson.h>
 
 ${settings}
 ${WIFI_HELPERS}
+WebSocketsClient ws;
+bool wsUp = false;
+uint32_t nextConnect = 0, backoffMs = 1000;
+int estadoActual = -1;            // -1 = todavía sin orden del servidor
+
 void aplicar(bool encendido) {
   digitalWrite(PIN_SALIDA, (encendido != ACTIVO_EN_LOW) ? HIGH : LOW);
 }
 
-// Devuelve 1 = encendido, 0 = apagado, -1 = no se pudo consultar.
-int leerEstado() {
-  HTTPClient http;
-  http.begin(urlBase() + "/api/v1/actuators/" + ACTUADOR_ID + "/");
-  http.setAuthorization(USUARIO, CONTRASENA);
-  http.addHeader("Accept", "application/json");
-  int status = http.GET();
-  int resultado = -1;
-  if (status == 200) {
-    JsonDocument doc;
-    if (!deserializeJson(doc, http.getString()) && doc["state"].is<bool>()) {
-      resultado = doc["state"].as<bool>() ? 1 : 0;
-    }
-  } else {
-    Serial.printf("HTTP %d (401/403 = usuario o permisos; 404 = id equivocado)\\n", status);
-  }
-  http.end();
-  return resultado;
+void orden(bool encendido) {
+  if (estadoActual == (encendido ? 1 : 0)) return;
+  estadoActual = encendido ? 1 : 0;
+  aplicar(encendido);
+  Serial.println(encendido ? "ENCENDIDO" : "Apagado");
 }
 
-uint32_t ultimo = 0;
-int estadoActual = -1;
+void alEventoWS(WStype_t tipo, uint8_t* payload, size_t len) {
+  switch (tipo) {
+    case WStype_CONNECTED:
+      wsUp = true; backoffMs = 1000;
+      Serial.println("[WS] conectado: esperando órdenes de la página");
+      break;
+    case WStype_DISCONNECTED:
+      if (wsUp) Serial.println("[WS] desconectado; se conserva el último estado y se reintenta");
+      wsUp = false;
+      nextConnect = millis() + backoffMs;
+      backoffMs = min<uint32_t>(backoffMs * 2, 30000);   // espera progresiva
+      break;
+    case WStype_TEXT: {
+      JsonDocument d;
+      if (deserializeJson(d, payload, len)) return;
+      const char* ev = d["event"] | "";
+      if (!strcmp(ev, "actuators")) {          // al conectar: estado actual de los actuadores de este dispositivo
+        bool encontrado = false;
+        for (JsonObjectConst a : d["actuators"].as<JsonArrayConst>()) {
+          if ((a["id"] | 0) == ACTUADOR_ID) { orden(a["state"] | false); encontrado = true; }
+        }
+        if (!encontrado) {
+          Serial.println("Ojo: el actuador " + String(ACTUADOR_ID) + " no está asignado a este dispositivo");
+          Serial.println("     (o está desactivado). Asígnalo en su página: \\"Dispositivo al que pertenece\\".");
+        }
+      } else if (!strcmp(ev, "actuator_state")) {   // alguien lo cambió en la página
+        if ((d["actuator_id"] | 0) == ACTUADOR_ID) orden(d["state"] | false);
+      } else if (!strcmp(ev, "ping")) {
+        ws.sendTXT("{\\"event\\":\\"pong\\"}");
+      }
+      break;
+    }
+    default: break;
+  }
+}
+
+String pedirToken() {
+  HTTPClient http;
+  http.begin(urlBase() + "/api/v1/devices/ws-token/");
+  http.addHeader("X-Device-Key", DEVICE_KEY);
+  http.addHeader("Content-Type", "application/json");
+  int code = http.POST("{}");
+  String token = "";
+  if (code == 200) {
+    JsonDocument d;
+    if (!deserializeJson(d, http.getString())) token = String((const char*)(d["token"] | ""));
+  } else {
+    Serial.printf("[token] HTTP %d%s\\n", code, code == 403 ? " (revisa DEVICE_KEY)" : "");
+  }
+  http.end();
+  return token;
+}
+
+void conectarWS() {
+  String token = pedirToken();              // un token de un solo uso por conexión
+  if (token.length() == 0) {
+    nextConnect = millis() + backoffMs; backoffMs = min<uint32_t>(backoffMs * 2, 30000); return;
+  }
+  String path = "/ws/device/?token=" + token;
+  if (USE_TLS) ws.beginSSL(SERVER_HOST, SERVER_PORT, path); else ws.begin(SERVER_HOST, SERVER_PORT, path);
+  ws.onEvent(alEventoWS);
+  ws.setReconnectInterval(0);               // la reconexión la manejamos nosotros (token nuevo)
+  nextConnect = millis() + 15000;           // si no conecta en 15 s, se vuelve a intentar
+}
 
 void setup() {
   Serial.begin(115200);
   pinMode(PIN_SALIDA, OUTPUT);
-  aplicar(false);                 // arranca SIEMPRE apagado
+  aplicar(false);                           // arranca SIEMPRE apagado
   delay(200);
   asegurarWiFi();
 }
 
 void loop() {
-  if (millis() - ultimo < INTERVALO_MS && ultimo != 0) return;
-  ultimo = millis();
-  if (!asegurarWiFi()) return;    // sin red: conserva el último estado
-
-  int estado = leerEstado();
-  if (estado >= 0 && estado != estadoActual) {
-    estadoActual = estado;
-    aplicar(estado == 1);
-    Serial.println(estado ? "Encendido" : "Apagado");
+  ws.loop();
+  if (!wsUp && millis() >= nextConnect) {
+    if (asegurarWiFi()) conectarWS(); else nextConnect = millis() + 2000;
   }
 }
 `;

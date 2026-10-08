@@ -9,21 +9,18 @@ import { ArduinoSteps, CodeView, ConnectTips, HostWarning, NetFields, useNetSett
 import { formatApiError } from "../lib/api";
 import type { Actuator } from "../types";
 import { CopyButton } from "./CopyButton";
-import { Button, Card, ErrorText, Input, Select } from "./ui";
+import { Button, Card, ErrorText, Select } from "./ui";
 
 /**
  * Datos para conectar un actuador físico (relé, bomba, ventilador...) con
- * el sistema: su `actuator_id`, a qué dispositivo pertenece, cómo se
- * cambia su estado y cómo puede enterarse el hardware.
+ * el sistema: su `actuator_id`, a qué dispositivo pertenece y el programa
+ * del ESP32.
  *
- * Límite real del backend (ver README): la API key de dispositivo
- * (X-Device-Key) SOLO sirve para mandar lecturas (POST /readings/ingest/).
- * No existe un endpoint donde el dispositivo consulte el estado de un
- * actuador con su API key. Lo que sí existe y se documenta aquí:
- *   - el estado lo cambia un usuario con rol Owner u Operator
- *     (POST /actuators/{id}/state/), y
- *   - el hardware puede enterarse consultando GET /actuators/{id}/ con
- *     un usuario real (Basic Auth; basta con rol Viewer para leer).
+ * El ESP32 entra con la clave de SU dispositivo (X-Device-Key) y abre el
+ * WebSocket /ws/device/: al conectarse recibe el estado actual de sus
+ * actuadores y, cada vez que alguien cambia uno en la página
+ * (POST /actuators/{id}/state/, rol Owner u Operator), el servidor le avisa
+ * al instante. Por eso el actuador TIENE que estar asignado a un dispositivo.
  */
 export function ActuatorConnectPanel({ actuator, greenhouseId }: { actuator: Actuator; greenhouseId: number }) {
   const { data: devices } = useDevices(greenhouseId);
@@ -32,22 +29,19 @@ export function ActuatorConnectPanel({ actuator, greenhouseId }: { actuator: Act
   const [deviceId, setDeviceId] = useState<number | "">(actuator.device ?? "");
 
   const [net, setNet] = useNetSettings();
-  const [user, setUser] = useState("");
-  const [userPass, setUserPass] = useState("");
   const [pin, setPin] = useState(26);
   const [activeLow, setActiveLow] = useState(false);
-  const [intervalS, setIntervalS] = useState(2);
   const myLoops = (loops ?? []).filter((l) => l.actuator === actuator.id);
+  const device = devices?.find((d) => d.id === actuator.device);
 
   const sketch = buildActuatorSketch({
     ...net,
+    deviceName: device?.name ?? "",
+    keyPrefix: device?.key_prefix ?? "",
     actuatorId: actuator.id,
     actuatorName: actuator.name,
-    user,
-    userPass,
     pin,
     activeLow,
-    intervalMs: intervalS * 1000,
   });
 
   const http = `# Encender / apagar (usuario con rol Owner u Operator)
@@ -57,8 +51,10 @@ Content-Type: application/json
 
 { "state": true }
 
-# Consultar el estado actual (basta rol Viewer)
-GET /api/v1/actuators/${actuator.id}/`;
+# Lo que recibe el ESP32 por su WebSocket (/ws/device/), al instante:
+{"event": "actuator_state", "actuator_id": ${actuator.id}, "state": true}
+# y al conectarse, el estado actual de todos los actuadores de su dispositivo:
+{"event": "actuators", "actuators": [{"id": ${actuator.id}, "state": false}]}`;
 
   return (
     <Card className="mb-6">
@@ -83,8 +79,8 @@ GET /api/v1/actuators/${actuator.id}/`;
       <p className="mb-4 flex items-start gap-2 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-sm text-sky-800">
         <Info className="mt-0.5 h-4 w-4 shrink-0" />
         <span>
-          La API key del dispositivo solo sirve para <b>mandar lecturas</b>. Un actuador no la usa: su estado lo cambia
-          una persona (o una automatización) desde el panel, y el hardware lo <b>consulta</b> con un usuario real.
+          El ESP32 entra con la <b>clave de su dispositivo</b> (no con la contraseña de una persona) y se queda
+          conectado: cuando cambias el interruptor en esta página, <b>le llega al instante</b>.
         </span>
       </p>
 
@@ -118,7 +114,8 @@ GET /api/v1/actuators/${actuator.id}/`;
         <div>
           <h3 className="font-semibold text-neutral-900">Programa para el ESP32 (Arduino)</h3>
           <p className="text-xs text-neutral-500">
-            Enciende o apaga un pin según el interruptor de esta página. Llena los campos y el código se arma solo.
+            Enciende o apaga un pin al instante según el interruptor de esta página. Llena los campos y el código se arma
+            solo.
           </p>
         </div>
 
@@ -133,35 +130,34 @@ GET /api/v1/actuators/${actuator.id}/`;
           </p>
         )}
 
-        <ArduinoSteps libs={<b>ArduinoJson</b>}>
+        {!actuator.device && (
+          <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" aria-hidden />
+            <span>
+              Primero elige arriba el <b>dispositivo al que pertenece</b> y guarda: el ESP32 usa la clave de ese
+              dispositivo y solo recibe órdenes de sus propios actuadores.
+            </span>
+          </p>
+        )}
+
+        <ArduinoSteps libs={<><b>WebSockets</b> (de Markus Sattler) y <b>ArduinoJson</b></>}>
           <li>
-            Crea en <b>Usuarios</b> una cuenta solo para el dispositivo y agrégala a este invernadero con rol{" "}
-            <b>viewer</b> (solo puede leer). Pon su usuario y contraseña abajo.
+            Pega en <code>DEVICE_KEY</code> la clave de{" "}
+            <b>{device ? `${device.name} (empieza con ${device.key_prefix})` : "su dispositivo"}</b>. Si no la tienes,
+            genérala en <Link to={`/greenhouses/${greenhouseId}/devices`} className="font-semibold underline">Dispositivos</Link>.
           </li>
         </ArduinoSteps>
 
         <NetFields net={net} onChange={setNet} />
 
         <fieldset>
-          <legend className="mb-2 text-sm font-semibold text-neutral-800">Cuenta del dispositivo y salida</legend>
-          <div className="grid items-end gap-3 sm:grid-cols-2 lg:grid-cols-[1fr_1fr_7rem_8rem_auto]">
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-neutral-600">Usuario (rol viewer)</span>
-              <Input value={user} onChange={(e) => setUser(e.target.value)} placeholder="esp32_nave" autoComplete="off" />
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-neutral-600">Contraseña de ese usuario</span>
-              <Input type="password" value={userPass} onChange={(e) => setUserPass(e.target.value)} autoComplete="new-password" />
-            </label>
+          <legend className="mb-2 text-sm font-semibold text-neutral-800">Salida</legend>
+          <div className="grid items-end gap-3 sm:grid-cols-[8rem_auto]">
             <label className="block">
               <span className="mb-1 block text-xs font-medium text-neutral-600">Pin (GPIO)</span>
               <Select value={pin} onChange={(e) => setPin(Number(e.target.value))}>
                 {OUTPUT_PINS.map((p) => <option key={p} value={p}>{p}</option>)}
               </Select>
-            </label>
-            <label className="block">
-              <span className="mb-1 block text-xs font-medium text-neutral-600">Preguntar cada (s)</span>
-              <Input type="number" min={1} value={intervalS} onChange={(e) => setIntervalS(Math.max(1, Number(e.target.value) || 1))} />
             </label>
             <label className="flex min-h-[42px] items-center gap-2 text-sm text-neutral-700">
               <input type="checkbox" checked={activeLow} onChange={(e) => setActiveLow(e.target.checked)} className="h-4 w-4 accent-brand-600" />
@@ -170,7 +166,7 @@ GET /api/v1/actuators/${actuator.id}/`;
           </div>
           <p className="mt-1.5 text-xs text-neutral-500">
             Muchos módulos de relevador se activan con LOW: si al encender el ESP32 el relevador se prende solo, marca
-            “Activo en LOW”. La contraseña no se guarda en ningún lado; solo se escribe en el código.
+            “Activo en LOW”.
           </p>
         </fieldset>
 
@@ -181,7 +177,7 @@ GET /api/v1/actuators/${actuator.id}/`;
       </div>
 
       <details className="rounded-xl border border-neutral-200 p-3">
-        <summary className="cursor-pointer text-sm font-medium text-neutral-700">Ver las peticiones HTTP (Postman)</summary>
+        <summary className="cursor-pointer text-sm font-medium text-neutral-700">Ver cómo funciona por dentro (HTTP y WebSocket)</summary>
         <div className="mt-2 flex items-start justify-between gap-2">
           <pre className="flex-1 overflow-auto rounded-lg bg-neutral-900 p-3 text-xs text-emerald-100">
             <code>{http}</code>
