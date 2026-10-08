@@ -105,28 +105,60 @@ export function buildSensorSketch(o: SensorSketchOptions): { settings: string; f
  * Manda las lecturas de UN sensor al Invernadero (ESP32 · núcleo Arduino-ESP32 3.x).
  * POST /api/v1/readings/ingest/ con el header X-Device-Key del dispositivo.
  *
+ * La conexión con el servidor se REUTILIZA entre lecturas (keep-alive): el
+ * saludo HTTPS, que es lo más lento, se hace una sola vez y no en cada lectura.
+ * Así cada envío tarda ~0.1-0.3 s y la página se actualiza casi al mismo tiempo
+ * que el monitor serie.
+ *
  * Si este ESP32 también controla actuadores con un lazo, usa en su lugar el
  * programa de la página Control: un ESP32 solo puede tener un programa.
  *
  * Qué debes ajustar: el bloque AJUSTES (y leerSensor() si dice "ESCRIBE AQUÍ").
  */
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <math.h>
 
 ${settings}
 ${WIFI_HELPERS}
+// Conexión que se reutiliza entre lecturas (no se cierra después de cada POST).
+WiFiClientSecure clienteTLS;   // HTTPS (USE_TLS true)
+WiFiClient clienteHTTP;        // HTTP en la red local (USE_TLS false)
+HTTPClient http;
+
 // Manda una lectura. Devuelve el código HTTP (200 = llegó bien).
 int enviarLectura(float valor) {
-  HTTPClient http;
-  http.begin(urlBase() + "/api/v1/readings/ingest/");
-  http.addHeader("Content-Type", "application/json");
-  http.addHeader("X-Device-Key", DEVICE_KEY);
   String body = String("{\\"sensor_id\\":") + SENSOR_ID + ",\\"value\\":" + String(valor, 2) + "}";
-  int status = http.POST(body);
-  Serial.printf("Lectura %.2f -> HTTP %d %s\\n", valor, status, http.getString().c_str());
-  http.end();
-  return status;
+  NetworkClient& cliente = USE_TLS ? static_cast<NetworkClient&>(clienteTLS) : clienteHTTP;
+  for (int intento = 1; intento <= 2; intento++) {
+    uint32_t t0 = millis();
+    http.begin(cliente, SERVER_HOST, SERVER_PORT, "/api/v1/readings/ingest/", USE_TLS);
+    http.addHeader("Content-Type", "application/json");
+    http.addHeader("X-Device-Key", DEVICE_KEY);
+    int status = http.POST(body);
+    if (status > 0) {
+      String resp = http.getString();
+      http.end();   // con setReuse(true) NO cierra la conexión: la siguiente lectura la reutiliza
+      unsigned long ms = millis() - t0;
+      if (status == 200) {
+        Serial.printf("Lectura %.2f -> HTTP 200 en %lu ms%s\\n", valor, ms,
+                      resp.indexOf("\\"persisted\\":1") >= 0 ? " (guardada en el historial)" : "");
+      } else {
+        Serial.printf("Lectura %.2f -> HTTP %d en %lu ms %s\\n", valor, status, ms, resp.c_str());
+        if (status == 429) Serial.println("  Demasiadas lecturas por minuto (máx. 120): sube INTERVALO_MS.");
+        if (status == 403) Serial.println("  Revisa DEVICE_KEY: el servidor no reconoce este dispositivo.");
+      }
+      return status;
+    }
+    // La conexión guardada ya no sirve (el túnel o el servidor la cerraron, o se
+    // fue el WiFi): se cierra, y en el segundo intento se abre una nueva.
+    Serial.printf("Conexión perdida (%s)%s\\n", http.errorToString(status).c_str(),
+                  intento == 1 ? ", reintentando con una conexión nueva..." : "");
+    http.end();
+    cliente.stop();
+  }
+  return -1;
 }
 
 uint32_t ultimo = 0;
@@ -134,6 +166,12 @@ uint32_t ultimo = 0;
 void setup() {
   Serial.begin(115200);
   delay(200);
+  // Sin certificado configurado, el ESP32 cifra pero no verifica el certificado
+  // del servidor: suficiente para pruebas.
+  clienteTLS.setInsecure();
+  http.setReuse(true);         // mantener la conexión abierta entre lecturas
+  http.setConnectTimeout(5000);
+  http.setTimeout(5000);
   asegurarWiFi();
 }
 
